@@ -2,6 +2,8 @@ import { ReactNode, useMemo, useState } from 'react';
 import { getLab, resetLab } from '../sim/labCache';
 import type { Lab, LabConfig } from '../sim/lab';
 import { LabView } from '../components/LabView';
+import { getTrack } from '../sim/track';
+import { useLevelTrack, withTrack } from './trackChoice';
 import { useNarration } from '../narration/Narrator';
 import { outroId } from '../narration/script';
 
@@ -39,7 +41,9 @@ interface TrainingProps {
 
 /** The "Train it" section every network level shares. */
 export function TrainingSection({ n, labKey, config, sideTop, showWeights, lead, title = 'Test drives and evolution' }: TrainingProps) {
-  const { lab, reset } = useLab(labKey, config);
+  const [trackId, setTrackId] = useLevelTrack(n);
+  const key = withTrack(labKey, trackId);
+  const { lab, reset } = useLab(key, { ...config, tracks: [getTrack(trackId)] });
   return (
     <section className="section">
       <h2 className="sectiontitle">{title}</h2>
@@ -47,7 +51,8 @@ export function TrainingSection({ n, labKey, config, sideTop, showWeights, lead,
         {lead ?? <>Press <b>Start evolution</b>: the first brain is random, then every next brain is the best one so far with a few weights nudged.
         Every test drive is a {lab.raceLaps}-lap race: first the brains learn to get further, then to get faster.</>}
       </p>
-      <LabView key={labKey} lab={lab} level={n} saveKey={labKey} onReset={reset} sideTop={sideTop?.(lab)} showWeights={showWeights} />
+      <LabView key={key} lab={lab} level={n} saveKey={key} onReset={reset} sideTop={sideTop?.(lab)} showWeights={showWeights}
+        trackPick={{ value: trackId, onChange: setTrackId }} />
     </section>
   );
 }

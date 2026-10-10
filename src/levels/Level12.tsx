@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { Lab } from '../sim/lab';
 import { BASIC, withFeatures } from '../sim/sensors';
 import { getLab, testCount } from '../sim/labCache';
+import { getTrack } from '../sim/track';
+import { useLevelTrack, withTrack } from './trackChoice';
 import { resultText } from '../sim/score';
 import { useTick } from '../hooks';
 import { SensorBars } from '../components/SensorBars';
@@ -28,6 +30,7 @@ function Side({ lab }: { lab: Lab }) {
 
 function Compare() {
   useTick(2);
+  const [t] = useLevelTrack(12);
   const tile = (name: string, lab: Lab) => (
     <div className="tile">
       <span>{name}</span>
@@ -37,8 +40,8 @@ function Compare() {
   );
   return (
     <div className="tiles">
-      {tile('No memory', getLab(OFF.key, OFF.config))}
-      {tile('With memory', getLab(ON.key, ON.config))}
+      {tile('No memory', getLab(withTrack(OFF.key, t), { ...OFF.config, tracks: [getTrack(t)] }))}
+      {tile('With memory', getLab(withTrack(ON.key, t), { ...ON.config, tracks: [getTrack(t)] }))}
     </div>
   );
 }

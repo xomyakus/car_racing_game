@@ -30,7 +30,7 @@ function Designs({ current, onPick }: { current: string; onPick: (hidden: number
         <tbody>
           {rows.map(([k, lab]) => (
             <tr key={k} className={k === current ? 'cur' : ''}>
-              <td><button className="linkbtn" onClick={() => onPick(lab.layers.slice(1, -1))}>{archText(lab.layers)}</button></td>
+              <td><button className="linkbtn" onClick={() => onPick(lab.layers.slice(1, -1))}>{archText(lab.layers)}</button><small>{lab.tracks[0].name}</small></td>
               <td>{weightCount(lab.layers)}</td>
               <td>{testCount(lab)}</td>
               <td>{lab.best ? resultText(lab.best) : '—'}</td>

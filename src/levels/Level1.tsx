@@ -95,10 +95,9 @@ export function Level1() {
       </LevelHeader>
       <div className="stage">
         <div className="board">
-          <TrackStage label="Race track. Use the arrow keys to drive." defaultCam="chase" advance={el => d.advance(el)} scene={() => d.sceneState()} hud={hud} toast={toast} />
+          <TrackStage label="Race track. Use the arrow keys to drive." defaultCam="chase" advance={el => d.advance(el)} scene={() => d.sceneState()} hud={hud} toast={toast} trackPick={{ value: trackId, onChange: pickTrack }} />
           <div className="controls" data-tour="drive-controls">
             <button className="btn primary" onClick={() => d.reset()}>Restart lap</button>
-            <TrackPicker value={trackId} onChange={pickTrack} />
             <label className="check" htmlFor="rival">Race against</label>
             <select id="rival" className="select" value={rival} onChange={e => pickRival(e.target.value)}>
               <option value="">nobody</option>

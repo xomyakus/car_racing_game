@@ -3,12 +3,12 @@ import type { Lab, Speed } from '../sim/lab';
 import { POP } from '../sim/lab';
 import { archText, weightCount } from '../sim/brain';
 import { progressPct } from '../sim/car';
-import { inputLabels } from '../sim/sensors';
+import { inputLabels, sensorText } from '../sim/sensors';
 import { REWARDS, resultText } from '../sim/score';
 import { WHY_LONG } from '../sim/text';
 import { saveChampion } from '../sim/storage';
 import { useTick, useToast } from '../hooks';
-import { TrackStage } from './TrackStage';
+import { TrackPick, TrackStage } from './TrackStage';
 import { NetDiagram } from './NetDiagram';
 import { PerceptronDiagram } from './PerceptronDiagram';
 import { LabChart } from './LabChart';
@@ -24,21 +24,33 @@ interface Props {
   /** extra panel shown at the top of the side column */
   sideTop?: ReactNode;
   showWeights?: boolean;
+  /** small track menu over the track view */
+  trackPick?: TrackPick;
+}
+
+/** Brain shape plus anything special about its senses or reward, e.g. "7 → 16 → 16 → 2 · noise 0.1". */
+export function setupText(lab: Lab): string {
+  return [archText(lab.layers), sensorText(lab.spec), lab.reward !== 'race' ? `reward: ${REWARDS[lab.reward].name}` : '']
+    .filter(Boolean).join(' · ');
 }
 
 const SPEEDS: Speed[] = [1, 5, 20, 'max'];
 
 /** Track + controls + live network + stats for training one network shape by evolution. */
-export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights }: Props) {
+export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, trackPick }: Props) {
   useTick(6);
   const [toast, showToast] = useToast();
   const labels = inputLabels(lab.spec);
 
   useEffect(() => {
     lab.onEvent = showToast;
+    const multiTrack = lab.tracks.length > 1;
+    const where = multiTrack ? lab.tracks.map(t => t.name).join(' + ') : lab.tracks[0].name;
     lab.onBest = e => saveChampion(saveKey, {
       layers: lab.layers, spec: lab.spec, w: Array.from(e.brain.w), pct: e.pct, raceTime: e.raceTime, of: e.of,
-      level, name: `Level ${level} · ${archText(lab.layers)}`,
+      level, name: `Level ${level} · ${archText(lab.layers)} · ${where}`,
+      track: multiTrack ? 'multi' : lab.tracks[0].id, tracks: lab.tracks.map(t => t.id), setup: setupText(lab),
+      tests: lab.testsDone, generation: lab.mode === 'pop' ? lab.popGen : lab.gens.length, reward: lab.reward, savedAt: Date.now(),
     });
     return () => { lab.onEvent = null; lab.onBest = null; };
   }, [lab, saveKey, level, showToast]);
@@ -86,7 +98,7 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights }: 
     <>
       <div className="stage">
         <div className="board">
-          <TrackStage label="Race track" advance={el => lab.advance(el)} scene={() => lab.sceneState()} hud={hud} toast={toast} />
+          <TrackStage label="Race track" advance={el => lab.advance(el)} scene={() => lab.sceneState()} hud={hud} toast={toast} trackPick={trackPick} />
           <div className="controls" data-tour="lab-buttons">
             <button className="btn primary" data-tour="lab-mode"
               onClick={() => { if (lab.auto) lab.paused = !lab.paused; else lab.startEvolution(); }}>

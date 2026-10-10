@@ -37,7 +37,7 @@ export const CORNERS: SensorSpec = { ...BASIC, features: ['speed', 'direction', 
 
 export const withFeatures = (base: SensorSpec, extra: FeatureId[]): SensorSpec => ({ ...base, features: [...base.features, ...extra] });
 
-const isDefaultRays = (rays: Ray[]) =>
+export const isDefaultRays = (rays: Ray[]) =>
   rays.length === DEFAULT_RAYS.length && rays.every((r, i) => r.angle === DEFAULT_RAYS[i].angle && r.len === RAY_LEN);
 
 export function rayLabel(r: Ray): string {
@@ -81,4 +81,26 @@ export function bendAhead(track: Track, idx: number, from: number, to: number): 
   let d = Math.atan2(TY[b], TX[b]) - Math.atan2(TY[a], TX[a]);
   d = Math.atan2(Math.sin(d), Math.cos(d));
   return Math.max(-1, Math.min(1, d / (Math.PI / 2)));
+}
+
+/** A short description of a sensor set-up compared with the basic 7 inputs, e.g. "3 rays over 90° · + time to crash · noise 0.1". */
+export function sensorText(spec: SensorSpec): string {
+  const parts: string[] = [];
+  const basic = inputLabels(BASIC), mine = inputLabels(spec);
+  const fanned = !isDefaultRays(spec.rays) && !spec.rays.every(r => DEFAULT_RAYS.some(d => Math.abs(d.angle - r.angle) < 1e-6 && d.len === r.len));
+  if (fanned) {
+    const a = spec.rays.map(r => r.angle), spread = Math.round(((Math.max(...a) - Math.min(...a)) * 180) / Math.PI);
+    parts.push(`${spec.rays.length} ray${spec.rays.length > 1 ? 's' : ''}${spec.rays.length > 1 ? ` over ${spread}°` : ''}, ${Math.round(spec.rays[0].len)} long`);
+  } else {
+    const missing = basic.filter(l => !mine.includes(l));
+    if (missing.length) parts.push(`without ${missing.join(', ')}`);
+  }
+  const extra = spec.features.filter(f => f !== 'speed' && f !== 'direction').map(f => FEATURE_LABEL[f]);
+  if (fanned) {
+    const gone = (['speed', 'direction'] as FeatureId[]).filter(f => !spec.features.includes(f));
+    if (gone.length) parts.push(`without ${gone.join(', ')}`);
+  }
+  if (extra.length) parts.push(`+ ${extra.join(', ')}`);
+  if (spec.noise > 0) parts.push(`noise ${spec.noise}`);
+  return parts.join(' · ');
 }

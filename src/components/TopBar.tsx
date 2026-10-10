@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import type { LevelDef } from '../levels';
+import { Championship } from './Championship';
 
 interface Props {
   level: LevelDef;
@@ -12,6 +14,7 @@ interface Props {
 
 export function TopBar({ level, total, onHome, onPrev, onNext, onListen }: Props) {
   const last = level.n === total;
+  const [champ, setChamp] = useState(false);
   return (
     <header className="topbar">
       <div className="topbar-in">
@@ -22,11 +25,13 @@ export function TopBar({ level, total, onHome, onPrev, onNext, onListen }: Props
         </div>
         <nav className="topnav">
           {onListen && <button className="btn ghost small" onClick={onListen}>🔊 Listen</button>}
+          <button className="btn ghost small" data-tour="championship" onClick={() => setChamp(true)}>🏆 Championship</button>
           <button className="btn ghost small" onClick={onHome}>All levels</button>
           {level.n > 1 && <button className="btn ghost small" onClick={onPrev} aria-label="Previous level">←</button>}
           <button className="btn primary small" data-tour="next" onClick={onNext}>{last ? 'Back to levels' : `Next level →`}</button>
         </nav>
       </div>
+      {champ && <Championship onClose={() => setChamp(false)} />}
     </header>
   );
 }

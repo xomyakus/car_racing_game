@@ -121,6 +121,8 @@ export class Lab {
   /** which training track the current test is on */
   leg = 0;
   stats = { randoms: 0, early: 0, kids: 0, better: 0, fails: 0, laps: 0, finishers: 0 };
+  /** test drives finished so far (each car in a 20-car race counts as one) */
+  testsDone = 0;
   gens: GenRecord[] = [];
   curGen: GenRecord | null = null;
   hist: HistPoint[] = [];
@@ -235,6 +237,7 @@ export class Lab {
     e.score = this.score(e);
     if (!e.counted) {
       e.counted = true;
+      this.testsDone++;
       const s = this.stats;
       if (e.origin === 'child') {
         s.kids++;
@@ -307,6 +310,7 @@ export class Lab {
     this.endPopGen();
   }
   private endPopGen() {
+    this.testsDone += this.popBrains.length;
     const res = this.popBrains.map((b, i) => {
       const pr = this.popResults[i], r = combine(pr.r, this.raceLaps);
       return { b, r, legs: pr.r, why: pr.why.find(w => w !== 'race') ?? 'race', laps: pr.laps, s: this.score(r) };

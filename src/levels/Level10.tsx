@@ -63,7 +63,7 @@ export function Level10() {
       </section>
       <section className="section">
         <h2 className="sectiontitle">Train on {train.map(id => trackInfo(id).name).join(' + ')}</h2>
-        <LabView key={key} lab={lab} level={10} saveKey={key} onReset={reset} />
+        <LabView key={key} lab={lab} level={10} saveKey={key} onReset={reset} trackPick={{ value: train[0], onChange: t => setTrain([t]) }} />
       </section>
       <section className="section">
         <div className="lessons">

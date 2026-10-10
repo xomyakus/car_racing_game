@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { TRACK } from '../sim/track';
+import { getTrack } from '../sim/track';
+import { useLevelTrack, withTrack } from './trackChoice';
 import { BASIC, SensorSpec } from '../sim/sensors';
 import { ExamBatch } from '../sim/examBatch';
 import { pctText } from '../sim/score';
@@ -16,8 +17,9 @@ const specOf = (noise: number): SensorSpec => ({ ...BASIC, noise });
 
 export function Level11() {
   const [noise, setNoise] = useState(0);
-  const key = `L11:${noise}`;
-  const config = useMemo(() => ({ layers: [7, 16, 16, 2], spec: specOf(noise) }), [noise]);
+  const [trackId, setTrackId] = useLevelTrack(11);
+  const key = withTrack(`L11:${noise}`, trackId);
+  const config = useMemo(() => ({ layers: [7, 16, 16, 2], spec: specOf(noise), tracks: [getTrack(trackId)] }), [noise, trackId]);
   const { lab, reset } = useLab(key, config);
   const [exam, setExam] = useState<{ batch: ExamBatch; brainNo: number; key: string } | null>(null);
   useFrame(() => exam?.batch.step(8));
@@ -26,7 +28,7 @@ export function Level11() {
   const runExam = () => {
     if (!lab.best) return;
     const brain = lab.best.brain;
-    const jobs = EXAM_NOISE.flatMap(n => Array.from({ length: RUNS }, () => ({ key: String(n), brain, spec: specOf(n), track: TRACK, laps: LAPS })));
+    const jobs = EXAM_NOISE.flatMap(n => Array.from({ length: RUNS }, () => ({ key: String(n), brain, spec: specOf(n), track: lab.tracks[0], laps: LAPS })));
     setExam({ key, brainNo: lab.best.no, batch: new ExamBatch(jobs) });
   };
   const ex = exam && exam.key === key ? exam : null;
@@ -51,7 +53,7 @@ export function Level11() {
       </section>
       <section className="section">
         <h2 className="sectiontitle">Train with {noiseName(noise)} noise</h2>
-        <LabView key={key} lab={lab} level={11} saveKey={key} onReset={reset} />
+        <LabView key={key} lab={lab} level={11} saveKey={key} onReset={reset} trackPick={{ value: trackId, onChange: setTrackId }} />
       </section>
       <section className="section">
         <div className="lessons">
@@ -74,7 +76,7 @@ export function Level11() {
                         <td>{n}<small>{noiseName(n)}{n === noise ? ', like training' : ''}</small></td>
                         <td>{rs.length ? <span className={fin === rs.length ? 'ok' : fin ? '' : 'bad'}>{fin} of {rs.length}</span> : ex ? '…' : '—'}</td>
                         <td>{avg != null ? pctText(avg) : '—'}</td>
-                        <td><button className="btn small" disabled={!lab.best} onClick={() => { lab.watch(`${noiseName(n)} noise`, TRACK, specOf(n)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Watch</button></td>
+                        <td><button className="btn small" disabled={!lab.best} onClick={() => { lab.watch(`${noiseName(n)} noise`, lab.tracks[0], specOf(n)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Watch</button></td>
                       </tr>
                     );
                   })}

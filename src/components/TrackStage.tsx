@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { CamMode, Track3D } from '../render/Track3D';
 import type { SceneState } from '../sim/lab';
 import { ToastState, useFrame } from '../hooks';
+import { TRACK_IDS, TrackId, trackInfo } from '../sim/track';
 
 interface Props {
   /** advance the simulation by `el` real seconds */
@@ -11,10 +12,14 @@ interface Props {
   toast?: ToastState;
   defaultCam?: CamMode;
   label: string;
+  /** when set, a small track menu sits over the top-right corner of the view */
+  trackPick?: TrackPick;
 }
 
+export interface TrackPick { value: TrackId; onChange: (t: TrackId) => void }
+
 /** The 3D track with its HUD chips, camera switch and toast. Runs the frame loop for its page. */
-export function TrackStage({ advance, scene, hud, toast, defaultCam = 'top', label }: Props) {
+export function TrackStage({ advance, scene, hud, toast, defaultCam = 'top', label, trackPick }: Props) {
   const holderRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<Track3D | null>(null);
@@ -51,7 +56,15 @@ export function TrackStage({ advance, scene, hud, toast, defaultCam = 'top', lab
     <div className="trackwrap" data-tour="track" ref={wrapRef} tabIndex={0} aria-label={label} onPointerDown={() => wrapRef.current?.focus()}>
       <div ref={holderRef} className="trackholder" />
       {failed && <div className="nogl">This device can't show the 3D track. Try a newer browser.</div>}
-      <div className="hud" data-tour="hud">{hud}</div>
+      <div className={`hud${trackPick ? ' withpick' : ''}`} data-tour="hud">{hud}</div>
+      {trackPick && (
+        <label className="trackpick" data-tour="trackpick" title="Choose the track to test on">
+          <span>Track</span>
+          <select value={trackPick.value} onChange={e => trackPick.onChange(e.target.value as TrackId)} aria-label="Track to test on">
+            {TRACK_IDS.map(t => <option key={t} value={t}>{trackInfo(t).name}</option>)}
+          </select>
+        </label>
+      )}
       <div className="seg camsw" data-tour="camera" role="group" aria-label="Camera">
         <button aria-pressed={cam === 'top'} onClick={() => setCam('top')}>Top view</button>
         <button aria-pressed={cam === 'chase'} onClick={() => setCam('chase')}>Chase cam</button>

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { Lab } from '../sim/lab';
 import { BASIC, CORNERS } from '../sim/sensors';
 import { getLab, testCount } from '../sim/labCache';
+import { getTrack } from '../sim/track';
+import { useLevelTrack, withTrack } from './trackChoice';
 import { resultText } from '../sim/score';
 import { useTick } from '../hooks';
 import { SensorBars } from '../components/SensorBars';
@@ -23,6 +25,7 @@ function LiveSenses({ lab }: { lab: Lab }) {
 
 function Compare() {
   useTick(2);
+  const [t] = useLevelTrack(6);
   const row = (name: string, lab: Lab) => (
     <div className="tile">
       <span>{name}</span>
@@ -32,8 +35,8 @@ function Compare() {
   );
   return (
     <div className="tiles">
-      {row('Without corner sense', getLab(OFF.key, OFF.config))}
-      {row('With corner sense', getLab(ON.key, ON.config))}
+      {row('Without corner sense', getLab(withTrack(OFF.key, t), { ...OFF.config, tracks: [getTrack(t)] }))}
+      {row('With corner sense', getLab(withTrack(ON.key, t), { ...ON.config, tracks: [getTrack(t)] }))}
     </div>
   );
 }

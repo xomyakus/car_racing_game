@@ -105,6 +105,8 @@ describe('lab', () => {
     expect(lab.gens.length).toBeGreaterThan(0);
     // each generation's parent is better than the one before
     for (let g = 1; g < lab.gens.length; g++) expect(lab.gens[g].parent.score).toBeGreaterThan(lab.gens[g - 1].parent.score);
+    // every finished test drive is counted, for the championship
+    expect(lab.testsDone).toBe(lab.hist.length);
   });
 
   it('runs a population generation of 20 cars', () => {
@@ -164,5 +166,15 @@ describe('part 2 set-ups', () => {
     expect(c.inp.length).toBe(7);
     for (const v of c.inp) expect(Number.isFinite(v)).toBe(true);
     expect(withFeatures(BASIC, ['lastGas']).features).toEqual(['speed', 'direction', 'lastGas']);
+  });
+});
+
+describe('championship set-up text', () => {
+  it('describes how senses differ from the basic 7', async () => {
+    const { sensorText, fanRays, withFeatures, BASIC, DEFAULT_RAYS } = await import('./sensors');
+    expect(sensorText(BASIC)).toBe('');
+    expect(sensorText({ rays: fanRays(3, 40, 230), features: ['speed', 'direction'], noise: 0 })).toBe('3 rays over 40°, 230 long');
+    expect(sensorText({ rays: DEFAULT_RAYS.slice(1), features: ['direction'], noise: 0 })).toBe('without far left, speed');
+    expect(sensorText({ ...withFeatures(BASIC, ['timeToCrash']), noise: 0.1 })).toBe('+ time to crash · noise 0.1');
   });
 });

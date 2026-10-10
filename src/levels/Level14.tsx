@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DT } from '../sim/constants';
 import { Drive, Sample } from '../sim/drive';
 import { Car, newCar, progressPct, stepAI } from '../sim/car';
+import { Track, getTrack } from '../sim/track';
 import { BASIC, inputLabels } from '../sim/sensors';
 import { archText, cloneBrain, weightCount } from '../sim/brain';
 import { Copycat } from '../sim/train';
@@ -24,7 +25,8 @@ const WATCH_LAPS = 3;
 class Watcher {
   car: Car | null = null;
   private acc = 0;
-  start(cc: Copycat) { this.car = newCar(cloneBrain(cc.brain), '#1d9a52', BASIC); this.acc = 0; }
+  saved = false;
+  start(cc: Copycat, track: Track) { this.car = newCar(cloneBrain(cc.brain), '#1d9a52', BASIC, track); this.acc = 0; this.saved = false; }
   advance(el: number) {
     const c = this.car;
     if (!c?.alive) return;
@@ -87,10 +89,19 @@ export function Level14() {
   });
 
   const changeShape = (i: number) => { setShape(i); setCc(new Copycat(SHAPES[i])); setAgree(null); };
-  const watch = () => {
-    setMode('watch'); w.start(cc);
-    saveChampion('L14', { layers: cc.layers, spec: BASIC, w: Array.from(cc.brain.w), pct: 0, raceTime: null, of: WATCH_LAPS, level: 14, name: `Level 14 · your copycat (${archText(cc.layers)})` });
-  };
+  const watch = () => { setMode('watch'); w.start(cc, d.track); };
+  // once the copycat's drive ends, it enters the championship for that track
+  useFrame(() => {
+    const c = w.car;
+    if (!c || c.alive || w.saved || !c.brain) return;
+    w.saved = true;
+    const r = carResult(c, WATCH_LAPS);
+    saveChampion(`L14@${c.track.id}`, {
+      layers: cc.layers, spec: BASIC, w: Array.from(c.brain.w), pct: r.pct, raceTime: r.raceTime, of: WATCH_LAPS, level: 14,
+      name: `Level 14 · your copycat (${archText(cc.layers)}) · ${c.track.name}`, track: c.track.id, tracks: [c.track.id], setup: `copycat ${archText(cc.layers)}`,
+      tests: 1, epochs: cc.epochs, savedAt: Date.now(),
+    });
+  });
   const seconds = (data.length * DT).toFixed(0);
   const wc = w.car;
   const watchResult = wc && !wc.alive ? carResult(wc, WATCH_LAPS) : null;
@@ -114,6 +125,7 @@ export function Level14() {
       <div className="stage">
         <div className="board">
           <TrackStage label="Race track" defaultCam={mode === 'drive' ? 'chase' : 'top'} toast={toast} hud={hud}
+            trackPick={{ value: d.track.id, onChange: t => { d.setTrack(getTrack(t)); if (mode === 'watch') w.start(cc, d.track); } }}
             advance={el => (mode === 'drive' ? d.advance(el) : w.advance(el))}
             scene={() => (mode === 'drive' ? d.sceneState() : w.scene(d.sceneState()))} />
           <div className="controls">
