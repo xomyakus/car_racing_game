@@ -1,0 +1,46 @@
+/* ---------- narrator: spotlight + caption ---------- */
+/* the spotlight is a hole in a dim layer: its huge shadow darkens everything around the target.
+   It never catches clicks, so the page keeps working while the coach talks. */
+.spot { position: fixed; left: 0; top: 0; z-index: 50; width: 0; height: 0; pointer-events: none; border-radius: 16px; box-shadow: 0 0 0 4px var(--ray), 0 0 0 200vmax rgba(30, 42, 36, .55); opacity: 0; transition: opacity .25s; will-change: transform; }
+.spot.on { opacity: 1; }
+.spot::after { content: ""; position: absolute; inset: -4px; border-radius: 20px; border: 3px solid var(--ray); animation: spot-ring 1.3s ease-out infinite; }
+@keyframes spot-ring { from { inset: -4px; opacity: .9; } to { inset: -16px; opacity: 0; } }
+
+.narr { position: fixed; z-index: 60; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(700px, calc(100% - 24px)); display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 14px; padding: 14px 16px; background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 0 6px 0 var(--ink); }
+.narr-face { width: 58px; height: 58px; border-radius: 50%; background: var(--red); border: 3px solid var(--ink); display: flex; align-items: center; justify-content: center; gap: 4px; }
+.narr-face i { width: 5px; height: 22px; border-radius: 3px; background: var(--paper); animation: narr-talk .7s ease-in-out infinite alternate; }
+.narr-face i:nth-child(2) { animation-delay: -.25s; }
+.narr-face i:nth-child(3) { animation-delay: -.5s; }
+.narr-face i:nth-child(4) { animation-delay: -.12s; }
+.narr.quiet .narr-face i { animation: none; height: 8px; }
+@keyframes narr-talk { from { height: 6px; } to { height: 26px; } }
+.narr-main { display: grid; gap: 8px; min-width: 0; }
+.narr-top { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding-right: 28px; }
+.narr-top b { font: 900 12px/1.2 var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.narr-dots { display: flex; flex-wrap: wrap; gap: 5px; }
+.narr-dots button { width: 10px; height: 10px; padding: 0; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); cursor: pointer; }
+.narr-dots button.done { background: var(--rule); }
+.narr-dots button.on { background: var(--red); width: 22px; border-radius: 6px; }
+.narr-text { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.4; text-wrap: pretty; }
+.narr-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.narr-ctl .grow { flex: 1; }
+.narr-x { position: absolute; top: 8px; right: 10px; width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font: 900 16px/1 var(--body); cursor: pointer; }
+.narr-x:hover { background: var(--mat); color: var(--ink); }
+.btn.pulse { animation: btn-pulse .9s ease-in-out infinite alternate; }
+@keyframes btn-pulse { from { box-shadow: 0 3px 0 var(--ink), 0 0 0 0 rgba(226, 65, 42, .5); } to { box-shadow: 0 3px 0 var(--ink), 0 0 0 8px rgba(226, 65, 42, 0); } }
+@media (max-width: 560px) {
+  .narr { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  .narr-face { display: none; }
+  .narr-text { font-size: 16px; }
+}
+/* room to scroll the last cards above the caption */
+.narrating .wrap { padding-bottom: 280px; }
+
+/* the "what this brain can't do" section that closes a level */
+.sectionhead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; }
+.levelend { display: flex; justify-content: center; padding-top: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .spot::after, .narr-face i, .btn.pulse { animation: none; }
+  .spot { transition: none; }
+}

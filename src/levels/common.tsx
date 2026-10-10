@@ -1,0 +1,92 @@
+import { ReactNode, useMemo, useState } from 'react';
+import { getLab, resetLab } from '../sim/labCache';
+import type { Lab, LabConfig } from '../sim/lab';
+import { LabView } from '../components/LabView';
+import { useNarration } from '../narration/Narrator';
+import { outroId } from '../narration/script';
+
+export function LevelHeader({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+  return (
+    <header className="levelhead" data-tour="levelhead">
+      <span className="bignum">{n}</span>
+      <div>
+        <h1>{title}</h1>
+        <p className="lead">{children}</p>
+      </div>
+    </header>
+  );
+}
+
+/** The cached lab for `key`, plus a way to throw it away and start over. */
+export function useLab(key: string, cfg: LabConfig) {
+  const [ver, setVer] = useState(0);
+  // the config is fixed for a given key, so the key alone decides which lab to use
+  const lab = useMemo(() => getLab(key, cfg), [key, ver]);
+  const reset = () => { resetLab(key, cfg); setVer(v => v + 1); };
+  return { lab, reset };
+}
+
+interface TrainingProps {
+  n: number;
+  labKey: string;
+  config: LabConfig;
+  /** extra panel at the top of the side column, given the lab being trained */
+  sideTop?: (lab: Lab) => ReactNode;
+  showWeights?: boolean;
+  lead?: ReactNode;
+  title?: string;
+}
+
+/** The "Train it" section every network level shares. */
+export function TrainingSection({ n, labKey, config, sideTop, showWeights, lead, title = 'Test drives and evolution' }: TrainingProps) {
+  const { lab, reset } = useLab(labKey, config);
+  return (
+    <section className="section">
+      <h2 className="sectiontitle">{title}</h2>
+      <p className="sectionlead">
+        {lead ?? <>Test one brain at a time and keep nudging the best one, or race 20 cars at once.
+        Every test drive is a {lab.raceLaps}-lap race: first the brains learn to get further, then to get faster.</>}
+      </p>
+      <LabView key={labKey} lab={lab} level={n} saveKey={labKey} onReset={reset} sideTop={sideTop?.(lab)} showWeights={showWeights} />
+    </section>
+  );
+}
+
+export function Cards({ children, title }: { children: ReactNode; title?: string }) {
+  return (
+    <section className="section">
+      {title && <h2 className="sectiontitle">{title}</h2>}
+      <div className="lessons">{children}</div>
+    </section>
+  );
+}
+
+/** `tour` names the card for the narrator's spotlight (see narration/script.ts). */
+export function Card({ title, children, wide, tour }: { title: string; children: ReactNode; wide?: boolean; tour?: string }) {
+  return (
+    <div className={`panel lesson${wide ? ' wide' : ''}`} data-tour={tour}>
+      <h2>{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The cards that close a level: what this brain still can't do. "Next level" reads them aloud first
+ * (see App), and the button here does the same; "Listen" plays them again.
+ */
+export function Outro({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+  const { play, nextLevel } = useNarration();
+  return (
+    <section className="section">
+      <div className="sectionhead">
+        <h2 className="sectiontitle">{title}</h2>
+        <button className="btn small" onClick={() => play(outroId(n))}>🔊 Listen</button>
+      </div>
+      <div className="lessons" data-tour="outro">{children}</div>
+      <div className="levelend">
+        <button className="btn primary" data-tour="levelend" onClick={nextLevel}>On to level {n + 1} →</button>
+      </div>
+    </section>
+  );
+}
