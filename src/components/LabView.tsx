@@ -10,6 +10,7 @@ import { saveChampion } from '../sim/storage';
 import { useTick, useToast } from '../hooks';
 import { TrackStage } from './TrackStage';
 import { NetDiagram } from './NetDiagram';
+import { PerceptronDiagram } from './PerceptronDiagram';
 import { LabChart } from './LabChart';
 import { GenTable, PopLog, TestedList } from './LabTables';
 
@@ -114,8 +115,14 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights }: 
           {sideTop}
           <div className="panel" data-tour="lab-brain">
             <h3>{single ? 'Brain on the track' : 'Brain of the car in front'} · {archText(lab.layers)} · {weightCount(lab.layers)} weights</h3>
-            <NetDiagram source={() => (focus?.brain ? { brain: focus.brain, acts: focus.acts } : best ? { brain: best.brain } : null)}
-              labels={labels} wide showWeights={showWeights} />
+            {showWeights && lab.layers.length === 2 && (focus?.brain ?? best?.brain)
+              // no hidden layer: each output is its own perceptron, so draw them as two separate pictures
+              ? (['gas', 'steer'] as const).map((kind, j) => {
+                  const brain = (focus?.brain ?? best!.brain), n = lab.layers[0];
+                  return <PerceptronDiagram key={kind} kind={kind} labels={labels} weights={brain.w.subarray(j * (n + 1), (j + 1) * (n + 1))} inputs={focus?.brain ? focus.inp : undefined} />;
+                })
+              : <NetDiagram source={() => (focus?.brain ? { brain: focus.brain, acts: focus.acts } : best ? { brain: best.brain } : null)}
+                  labels={labels} wide showWeights={showWeights} />}
             <div className="legend">
               <span><i style={{ background: 'var(--pos)' }} />positive weight (push)</span>
               <span><i style={{ background: 'var(--neg)' }} />negative weight (pull)</span>

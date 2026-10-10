@@ -61,12 +61,19 @@ export function Cards({ children, title }: { children: ReactNode; title?: string
   );
 }
 
-/** `tour` names the card for the narrator's spotlight (see narration/script.ts). */
-export function Card({ title, children, wide, tour }: { title: string; children: ReactNode; wide?: boolean; tour?: string }) {
+/**
+ * `tour` names the card for the narrator's spotlight (see narration/script.ts).
+ * With an `image`, the card spans the full width: text on the left, the picture on the right.
+ */
+export function Card({ title, children, wide, tour, image }: { title: string; children: ReactNode; wide?: boolean; tour?: string; image?: ReactNode }) {
   return (
-    <div className={`panel lesson${wide ? ' wide' : ''}`} data-tour={tour}>
-      <h2>{title}</h2>
-      {children}
+    <div className={`panel lesson${wide || image ? ' wide' : ''}`} data-tour={tour}>
+      {image
+        ? <div className="cardsplit">
+            <div className="cardtext"><h2>{title}</h2>{children}</div>
+            <div className="cardimg">{image}</div>
+          </div>
+        : <><h2>{title}</h2>{children}</>}
     </div>
   );
 }
