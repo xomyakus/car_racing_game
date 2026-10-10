@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { RAY_LEN } from '../sim/constants';
 import { SensorSpec, fanRays, inputCount } from '../sim/sensors';
 import { CompareTable } from '../components/CompareTable';
-import { Card, Cards, LevelHeader, TrainingSection } from './common';
+import { EyesWeightsArt, FarWideArt, OneEyeArt } from './art/Level7to9Art';
+import { Card, LevelHeader, Outro, TrainingSection } from './common';
 
 interface Eyes { count: number; spread: number; len: number }
 const PRESETS: { name: string; eyes: Eyes }[] = [
@@ -49,7 +50,7 @@ export function Level7() {
       </LevelHeader>
       <section className="section">
         <div className="lessons">
-          <div className="panel lesson wide">
+          <div className="panel lesson wide" data-tour="eyes">
             <h2>Design the eyes</h2>
             <div className="builder">
               <div className="buildcol">
@@ -73,17 +74,17 @@ export function Level7() {
         </div>
       </section>
       <TrainingSection key={key} n={7} labKey={key} config={config} />
-      <Cards title="What to look for">
-        <Card title="Seeing far vs seeing wide">
+      <Outro n={7} title="What to look for">
+        <Card title="Seeing far vs seeing wide" image={<FarWideArt />} tour="outro-1">
           <p>Long rays warn about corners early, so a fast car has time to brake. Wide rays see the walls beside the car, which helps it stay in the middle.</p>
         </Card>
-        <Card title="More eyes, more weights">
+        <Card title="More eyes, more weights" image={<EyesWeightsArt />} tour="outro-2">
           <p>Every extra ray is another input, with 16 more weights to the first hidden layer. More information, but more to learn.</p>
         </Card>
-        <Card title="Can one eye drive?">
+        <Card title="Can one eye drive?" image={<OneEyeArt />} tour="outro-3">
           <p>With a single ray straight ahead, the car knows a wall is coming but not which way to turn. Try it, and watch how it fails.</p>
         </Card>
-      </Cards>
+      </Outro>
     </>
   );
 }

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { BASIC, FeatureId, inputCount, withFeatures } from '../sim/sensors';
 import { CompareTable } from '../components/CompareTable';
-import { Card, Cards, LevelHeader, TrainingSection } from './common';
+import { CompareClueArt, EngineerArt, TimeMathArt } from './art/Level7to9Art';
+import { Card, LevelHeader, Outro, TrainingSection } from './common';
 
 const EXTRAS: { id: FeatureId; name: string; what: string }[] = [
   { id: 'timeToCrash', name: 'Time to crash', what: 'Seconds until you hit the wall ahead if you keep your speed. 0 = right now, 1 = two seconds or more.' },
@@ -27,7 +28,7 @@ export function Level9() {
       </LevelHeader>
       <section className="section">
         <div className="lessons">
-          <div className="panel lesson wide">
+          <div className="panel lesson wide" data-tour="clues">
             <h2>Add clues</h2>
             <div className="sensegrid wide">
               {EXTRAS.map(e => (
@@ -45,17 +46,17 @@ export function Level9() {
         </div>
       </section>
       <TrainingSection key={key} n={9} labKey={key} config={config} />
-      <Cards title="Why clues can help">
-        <Card title="Doing the maths for the brain">
+      <Outro n={9} title="Why clues can help">
+        <Card title="Doing the maths for the brain" image={<TimeMathArt />} tour="outro-1">
           <p>"Time to crash" is the ahead ray divided by the speed. A brain could learn to work that out itself, but division is hard to build from add-and-squeeze neurons. Handing it over can save a lot of training.</p>
         </Card>
-        <Card title="Feature engineering">
+        <Card title="Feature engineering" image={<EngineerArt />} tour="outro-2">
           <p>Choosing and building good inputs is called <b>feature engineering</b>. Before deep learning, it was most of the work in machine learning, and it still matters.</p>
         </Card>
-        <Card title="Compare with level 4">
+        <Card title="Compare with level 4" image={<CompareClueArt />} tour="outro-3">
           <p>Level 4 has the same brain shape with only the basic 7. Is your version faster to finish 10 laps? Does it end up quicker?</p>
         </Card>
-      </Cards>
+      </Outro>
     </>
   );
 }

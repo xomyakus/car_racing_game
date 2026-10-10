@@ -6,7 +6,9 @@ import { loadSaved, saveBuilder } from '../sim/storage';
 import { resultText } from '../sim/score';
 import { useTick } from '../hooks';
 import { NetDiagram } from '../components/NetDiagram';
-import { Card, Cards, LevelHeader, TrainingSection } from './common';
+import { BottleneckArt, LuckArt } from './art/Level4to6Art';
+import { WideDeepArt } from './art/Level3Art';
+import { Card, LevelHeader, Outro, TrainingSection } from './common';
 
 const MAX_LAYERS = 4, MAX_N = 32;
 const PRESETS: { name: string; hidden: number[] }[] = [
@@ -57,7 +59,7 @@ export function Level5() {
       </LevelHeader>
       <section className="section">
         <div className="lessons">
-          <div className="panel lesson wide">
+          <div className="panel lesson wide" data-tour="builder">
             <h2>Design the brain</h2>
             <div className="builder">
               <div className="buildcol">
@@ -96,17 +98,17 @@ export function Level5() {
         </div>
       </section>
       <TrainingSection n={5} labKey={key} config={{ layers: layers }} />
-      <Cards title="Experiments to try">
-        <Card title="Too small">
+      <Outro n={5} title="Experiments to try">
+        <Card title="Too small" image={<BottleneckArt />} tour="outro-1">
           <p>Try <b>Tiny</b>: 2 hidden neurons. Can it still finish 10 laps? Every idea the brain has must fit through just 2 neurons.</p>
         </Card>
-        <Card title="Wide or deep?">
+        <Card title="Wide or deep?" image={<WideDeepArt />} tour="outro-2">
           <p><b>One wide layer</b> (32 neurons) and <b>Deep and thin</b> (four layers of 6) have a similar number of weights. Which learns faster? Which ends up quicker?</p>
         </Card>
-        <Card title="Same shape, different luck">
+        <Card title="Same shape, different luck" image={<LuckArt />} tour="outro-3">
           <p>Press <b>Start over</b> and train the same shape again. Evolution uses random nudges, so results change from run to run. A fair comparison needs a few runs of each shape.</p>
         </Card>
-      </Cards>
+      </Outro>
     </>
   );
 }

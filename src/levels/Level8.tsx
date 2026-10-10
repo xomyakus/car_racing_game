@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { BASIC, DEFAULT_RAYS, FeatureId, SensorSpec, inputLabels } from '../sim/sensors';
 import { CompareTable } from '../components/CompareTable';
-import { Card, Cards, LevelHeader, TrainingSection } from './common';
+import { CostArt, FairTestArt, HiddenSenseArt } from './art/Level7to9Art';
+import { Card, LevelHeader, Outro, TrainingSection } from './common';
 
 const NAMES = inputLabels(BASIC);
 const FEATS: FeatureId[] = ['speed', 'direction'];
@@ -41,7 +42,7 @@ export function Level8() {
       </LevelHeader>
       <section className="section">
         <div className="lessons">
-          <div className="panel lesson wide">
+          <div className="panel lesson wide" data-tour="senses">
             <h2>Choose the senses</h2>
             <div className="sensegrid">
               {NAMES.map((name, i) => (
@@ -61,17 +62,17 @@ export function Level8() {
         </div>
       </section>
       <TrainingSection key={key} n={8} labKey={key} config={config} />
-      <Cards title="Reading the results">
-        <Card title="A fair test">
+      <Outro n={8} title="Reading the results">
+        <Card title="A fair test" image={<FairTestArt />} tour="outro-1">
           <p>Change one thing at a time. If you turn off speed <b>and</b> direction together and the car gets worse, you won't know which one mattered.</p>
         </Card>
-        <Card title="Some senses hide in others">
+        <Card title="Some senses hide in others" image={<HiddenSenseArt />} tour="outro-2">
           <p>Without "speed", the brain can still guess it a little: when it's fast, the rays change quickly. A sense that seems important can sometimes be replaced by others.</p>
         </Card>
-        <Card title="Why it matters">
+        <Card title="Why it matters" image={<CostArt />} tour="outro-3">
           <p>Real engineers do this to save money and computing power: if a sensor doesn't help, you don't need to build it into the car.</p>
         </Card>
-      </Cards>
+      </Outro>
     </>
   );
 }

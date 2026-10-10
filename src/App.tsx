@@ -4,6 +4,7 @@ import { NARRATIONS, introId, outroId } from './narration/script';
 import { NarrationCtx, Narrator, hasHeard, markHeard } from './narration/Narrator';
 import { Home } from './components/Home';
 import { TopBar } from './components/TopBar';
+import { TrackTour } from './components/TrackTour';
 import { Level1 } from './levels/Level1';
 import { Level2 } from './levels/Level2';
 import { Level3 } from './levels/Level3';
@@ -28,21 +29,32 @@ const fromHash = () => {
   return n >= 1 && n <= LEVELS.length ? n : 0;
 };
 
+const TOUR_HASH = '#tour';
+
 export function App() {
   const [level, setLevel] = useState(fromHash);
+  const [tour, setTour] = useState(() => location.hash === TOUR_HASH);
   // the coach's narration that is playing, if any; it stops whenever the level changes
   const [talk, setTalk] = useState<{ id: string; at: number } | null>(null);
 
   useEffect(() => {
-    const onHash = () => { setLevel(fromHash()); setTalk(null); };
+    const onHash = () => { setLevel(fromHash()); setTour(location.hash === TOUR_HASH); setTalk(null); };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
   const go = (n: number) => {
     setLevel(n);
+    setTour(false);
     setTalk(null);
     try { history.replaceState(null, '', n ? `#level-${n}` : location.pathname + location.search); } catch { /* sandboxed */ }
+    window.scrollTo({ top: 0 });
+  };
+
+  const openTour = () => {
+    setTour(true);
+    setTalk(null);
+    try { history.replaceState(null, '', TOUR_HASH); } catch { /* sandboxed */ }
     window.scrollTo({ top: 0 });
   };
 
@@ -54,13 +66,28 @@ export function App() {
   // a level's intro plays by itself the first time the level opens
   useEffect(() => {
     const id = introId(level);
-    if (!level || !NARRATIONS[id] || hasHeard(id)) return;
+    if (!level || tour || !NARRATIONS[id] || hasHeard(id)) return;
     const t = setTimeout(() => play(id), 500);
     return () => clearTimeout(t);
-  }, [level, play]);
+  }, [level, tour, play]);
   const closeTalk = useCallback(() => setTalk(null), []);
 
-  if (!level) return <Home onOpen={go} />;
+  if (tour) return (
+    <>
+      <header className="topbar">
+        <div className="topbar-in">
+          <button className="logo" onClick={() => go(0)} aria-label="Back to all levels">Brain<span>Racers</span></button>
+          <div className="where"><span className="lvl">Every track</span><b>Track tour</b></div>
+          <nav className="topnav">
+            <button className="btn ghost small" onClick={() => go(0)}>All levels</button>
+            {level > 0 && <button className="btn primary small" onClick={() => go(level)}>Back to level {level}</button>}
+          </nav>
+        </div>
+      </header>
+      <main className="wrap"><TrackTour /></main>
+    </>
+  );
+  if (!level) return <Home onOpen={go} onTour={openTour} />;
   const Page = PAGES[level - 1];
   const after = level < LEVELS.length ? level + 1 : 0;
   // "next level" plays the level's wrap-up first, the first time; it ends with the button that moves on
@@ -72,7 +99,7 @@ export function App() {
   const finish = talk?.id === outroId(level) ? { label: after ? `Go to level ${after} →` : 'Back to levels', go: () => go(after) } : undefined;
   return (
     <NarrationCtx.Provider value={{ play, nextLevel }}>
-      <TopBar level={LEVELS[level - 1]} total={LEVELS.length} onHome={() => go(0)} onPrev={() => go(level - 1)} onNext={nextLevel}
+      <TopBar level={LEVELS[level - 1]} total={LEVELS.length} onHome={() => go(0)} onTour={openTour} onPrev={() => go(level - 1)} onNext={nextLevel}
         onListen={NARRATIONS[introId(level)] ? () => play(introId(level)) : undefined} />
       <main className="wrap" key={level}>
         <Page />

@@ -135,7 +135,7 @@ export function WideDeepArt() {
   const column = (n: number, top: number, gap: number) => Array.from({ length: n }, (_, i) => top + i * gap);
   const wide = column(14, 22, 11.5), deepA = column(6, 50, 20), deepB = column(6, 50, 20);
   return (
-    <svg viewBox="0 0 440 210" className="art" role="img" aria-label="One wide layer needs many neurons; two smaller stacked layers can do the same job with fewer">
+    <svg viewBox="0 0 440 216" className="art" role="img" aria-label="One wide layer needs many neurons; two smaller stacked layers can do the same job with fewer">
       {wide.map(y => <circle key={y} cx={110} cy={y} r={4.5} fill="var(--paper)" stroke="var(--ink)" strokeWidth={1.5} />)}
       {[40, 100, 160].map(y => wide.map(w => <line key={`${y}-${w}`} x1={40} y1={y} x2={105} y2={w} stroke="var(--rule)" strokeWidth={0.8} />))}
       {[40, 100, 160].map(y => <circle key={y} cx={36} cy={y} r={6} fill="rgba(244,194,28,.4)" stroke="var(--ink)" strokeWidth={1.5} />)}

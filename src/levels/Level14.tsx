@@ -16,7 +16,8 @@ import { ctx2d, sizeCanvas, useFrame, useTick, useToast } from '../hooks';
 import { TrackStage } from '../components/TrackStage';
 import { NetDiagram } from '../components/NetDiagram';
 import { TouchPad, useDriveKeys } from './Level1';
-import { Card, Cards, LevelHeader } from './common';
+import { BeatYouArt, CopyArt, CycleArt, DriftArt } from './art/Level10to14Art';
+import { Card, LevelHeader, Outro } from './common';
 
 const SHAPES = [[7, 8, 2], [7, 16, 2], [7, 16, 16, 2]];
 const WATCH_LAPS = 3;
@@ -128,8 +129,8 @@ export function Level14() {
             trackPick={{ value: d.track.id, onChange: t => { d.setTrack(getTrack(t)); if (mode === 'watch') w.start(cc, d.track); } }}
             advance={el => (mode === 'drive' ? d.advance(el) : w.advance(el))}
             scene={() => (mode === 'drive' ? d.sceneState() : w.scene(d.sceneState()))} />
-          <div className="controls">
-            <div className="seg" role="group" aria-label="What happens on the track">
+          <div className="controls" data-tour="record">
+            <div className="seg" data-tour="copywatch" role="group" aria-label="What happens on the track">
               <button aria-pressed={mode === 'drive'} onClick={() => setMode('drive')}>1. You drive</button>
               <button aria-pressed={mode === 'watch'} onClick={watch} disabled={!cc.epochs}>3. Watch the copycat</button>
             </div>
@@ -143,7 +144,7 @@ export function Level14() {
           <p className="hint">Drive 2 or 3 clean laps while recording. Drive the way you want the brain to drive: it will copy your mistakes too!</p>
         </div>
         <aside className="side">
-          <div className="panel">
+          <div className="panel" data-tour="copytrain">
             <h2>2. Train the copycat</h2>
             <p className="small">You recorded <b>{data.length}</b> moments ({seconds} seconds). Each one is an example: "the car felt <i>these 7 numbers</i>, and you pressed <i>these keys</i>".</p>
             <div className="seg" role="group" aria-label="Brain shape">
@@ -165,20 +166,20 @@ export function Level14() {
           </div>
         </aside>
       </div>
-      <Cards title="Two ways to learn">
-        <Card title="Evolution (levels 2–13)">
+      <Outro n={14} title="Two ways to learn">
+        <Card title="Evolution (levels 2–13)" image={<CycleArt />} tour="outro-1">
           <p>Try a brain, give it a score, keep the best, nudge it at random. Nobody tells the brain what the right move was, only how well it did in the end.</p>
         </Card>
-        <Card title="Copying (supervised learning)">
+        <Card title="Copying (supervised learning)" image={<CopyArt />} tour="outro-2">
           <p>For every moment you recorded, the brain knows the right answer: what you pressed. <b>Backpropagation</b> works out exactly which way to change every weight to make its answer a bit closer to yours, thousands of times a second.</p>
         </Card>
-        <Card title="Why copycats crash">
+        <Card title="Why copycats crash" image={<DriftArt />} tour="outro-3">
           <p>If the copycat drifts somewhere you never drove, like too close to a wall, it has no examples for that and doesn't know what to do. Try recording a few "rescues", where you steer away from a wall, and train again.</p>
         </Card>
-        <Card title="Can it beat you?">
+        <Card title="Can it beat you?" image={<BeatYouArt />} tour="outro-4">
           <p>A perfect copycat drives exactly like you, mistakes included. To get <i>better</i> than its teacher, a brain needs a score to improve on, like evolution in the other levels.</p>
         </Card>
-      </Cards>
+      </Outro>
     </>
   );
 }

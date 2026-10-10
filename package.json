@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "narrate": "node scripts/narrate.mjs"
+    "narrate": "node scripts/narrate.mjs && node scripts/compress-audio.mjs",
+    "audio:compress": "node scripts/compress-audio.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

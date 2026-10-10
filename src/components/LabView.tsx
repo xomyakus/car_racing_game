@@ -9,7 +9,7 @@ import { WHY_LONG } from '../sim/text';
 import { saveChampion } from '../sim/storage';
 import { useTick, useToast } from '../hooks';
 import { TrackPick, TrackStage } from './TrackStage';
-import { useTrackRecords } from './trackRecords';
+import { ordinal, useTrackRecords } from './trackRecords';
 import { NetDiagram } from './NetDiagram';
 import { PerceptronDiagram } from './PerceptronDiagram';
 import { LabChart } from './LabChart';
@@ -43,7 +43,7 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
   const [toast, showToast] = useToast();
   const labels = inputLabels(lab.spec);
   // championship records for this track (multi-track training has no single track)
-  const records = useTrackRecords(lab.tracks.length === 1 ? lab.tracks[0].id : null);
+  const records = useTrackRecords(lab.tracks.length === 1 ? lab.tracks[0].id : null, saveKey);
 
   useEffect(() => {
     lab.onEvent = showToast;
@@ -95,6 +95,9 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
 
   const focus = lab.focus();
   const best = lab.best;
+  // this level's place among every racer saved on this track: brains from all levels, plus you
+  const place = records?.place;
+  const placeLine = place && <small className="record place">championship: {ordinal(place.n)} of {place.of} racers{place.n <= 3 ? ` ${['🥇', '🥈', '🥉'][place.n - 1]}` : ''}</small>;
   const goal = lab.reward === 'race'
     ? <>Goal: finish all <b>{lab.raceLaps} laps</b>{multi ? <> on each of the <b>{lab.tracks.length} tracks</b></> : null}, then finish faster.</>
     : <>Reward rule: <b>{REWARDS[lab.reward].name}</b>. {REWARDS[lab.reward].rule}</>;
@@ -141,13 +144,15 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
       <div className="panel statrow" data-tour="lab-best">
         <div className="tiles">
           <div className="tile"><span>Best brain</span><b>{best ? `#${best.no}` : '—'}</b><small>{best ? resultText(best) : 'nothing tested yet'}</small>
-            {records && <small className="record">{records.race ? `track champion: ${records.race.time.toFixed(1)}s, level ${records.race.level}` : 'no track champion yet'}</small>}</div>
+            {records && <small className="record">{records.race ? `track champion: ${records.race.time.toFixed(1)}s, level ${records.race.level}` : 'no track champion yet'}</small>}
+            {placeLine}</div>
           {single
             ? <div className="tile"><span>Generation</span><b>{lab.curGen?.n ?? 0}</b><small>{lab.stats.kids} children tried</small></div>
             : <div className="tile"><span>Generation</span><b>{lab.popGen}</b><small>{POP} cars per race</small></div>}
           <div className="tile"><span>Fastest lap</span><b>{lab.fastestLap?.bestLap != null ? `${lab.fastestLap.bestLap.toFixed(2)}s` : '—'}</b>
             <small>{lab.fastestLap ? `brain #${lab.fastestLap.no}${lab.fastestLap === best ? ', the best brain' : ''}` : 'counts once a brain finishes the race'}</small>
-            {records && <small className="record">{records.lap ? `track record: ${records.lap.time.toFixed(2)}s, ${records.lap.who}` : 'no lap record yet'}</small>}</div>
+            {records && <small className="record">{records.lap ? `track record: ${records.lap.time.toFixed(2)}s, ${records.lap.who}` : 'no lap record yet'}</small>}
+            {placeLine}</div>
           <div className="tile"><span>Test drives</span><b>{lab.testsDone}</b><small>{lab.tracks.length > 1 ? `${lab.tracks.length} tracks each` : lab.tracks[0].name}</small></div>
         </div>
         <p className="small">

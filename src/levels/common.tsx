@@ -6,6 +6,7 @@ import { getTrack } from '../sim/track';
 import { useLevelTrack, withTrack } from './trackChoice';
 import { useNarration } from '../narration/Narrator';
 import { outroId } from '../narration/script';
+import { LEVELS } from '../levels';
 
 export function LevelHeader({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
@@ -97,7 +98,7 @@ export function Outro({ n, title, children }: { n: number; title: string; childr
       </div>
       <div className="lessons" data-tour="outro">{children}</div>
       <div className="levelend">
-        <button className="btn primary" data-tour="levelend" onClick={nextLevel}>On to level {n + 1} →</button>
+        <button className="btn primary" data-tour="levelend" onClick={nextLevel}>{n < LEVELS.length ? `On to level ${n + 1} →` : 'Back to all levels'}</button>
       </div>
     </section>
   );

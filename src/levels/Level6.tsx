@@ -7,7 +7,8 @@ import { useLevelTrack, withTrack } from './trackChoice';
 import { resultText } from '../sim/score';
 import { useTick } from '../hooks';
 import { SensorBars } from '../components/SensorBars';
-import { Card, Cards, LevelHeader, TrainingSection } from './common';
+import { BendArt, BulbArt, FeatureArt, LookAheadArt, MightNotWinArt, ShineArt } from './art/Level4to6Art';
+import { Card, Cards, LevelHeader, Outro, TrainingSection } from './common';
 
 const ON = { key: 'L6:corners', config: { layers: [9, 16, 16, 2], spec: CORNERS } };
 const OFF = { key: 'L6:basic', config: { layers: [7, 16, 16, 2], spec: BASIC } };
@@ -50,15 +51,15 @@ export function Level6() {
         So far the brain only felt walls, speed and direction. Now we give it two new numbers about the road ahead, like a driver who has learned the track.
       </LevelHeader>
       <Cards title="A new sense">
-        <Card title="Bend soon, bend later">
+        <Card title="Bend soon, bend later" tour="bends" image={<BendArt />}>
           <p><b>Bend soon</b> says how much the road turns in the next 120 units. <b>Bend later</b> says how much it turns after that, up to 300 units ahead.</p>
           <p>Both go from −1 (sharp left) through 0 (straight) to +1 (sharp right).</p>
         </Card>
-        <Card title="Why it might help">
+        <Card title="Why it might help" tour="help" image={<LookAheadArt />}>
           <p>The rays only see walls that are already close. By the time the "ahead" ray gets short, a fast car may be too late to brake.</p>
           <p>"Bend later" warns about a corner while the road in front still looks straight.</p>
         </Card>
-        <Card title="Feature development">
+        <Card title="Feature development" tour="features" image={<FeatureArt />}>
           <p>Choosing what the brain gets to know is called <b>feature engineering</b>. A good feature can matter more than a bigger brain. A useless one just adds weights to search.</p>
           <p>The brain grows from 7 to 9 inputs: 466 weights instead of 434.</p>
         </Card>
@@ -67,7 +68,7 @@ export function Level6() {
         <h2 className="sectiontitle">The experiment</h2>
         <p className="sectionlead">Same brain shape, same training. Train both versions and compare. Each one keeps its own progress when you switch.</p>
         <div className="controls">
-          <div className="seg" role="group" aria-label="Corner sense">
+          <div className="seg" data-tour="experiment" role="group" aria-label="Corner sense">
             <button aria-pressed={on} onClick={() => setOn(true)}>Corner sense ON (9 inputs)</button>
             <button aria-pressed={!on} onClick={() => setOn(false)}>OFF (7 inputs)</button>
           </div>
@@ -75,18 +76,18 @@ export function Level6() {
         <Compare />
       </section>
       <TrainingSection key={cfg.key} n={6} labKey={cfg.key} config={cfg.config} sideTop={lab => <LiveSenses lab={lab} />} />
-      <Cards title="Reading the result">
-        <Card title="It might not win">
+      <Outro n={6} title="Reading the result">
+        <Card title="It might not win" image={<MightNotWinArt />} tour="outro-1">
           <p>In our own tests, corner sense didn't clearly beat the plain version after a few hundred test drives. On this one track, the brain can already learn the corners from the rays alone.</p>
           <p>That's a real lesson: a new feature has to be tested, not just assumed to help.</p>
         </Card>
-        <Card title="When it should shine">
+        <Card title="When it should shine" image={<ShineArt />} tour="outro-2">
           <p>Knowing the road ahead matters most when the car goes fast or the corners are a surprise: a new track, a hairpin after a long straight.</p>
         </Card>
-        <Card title="Your turn">
+        <Card title="Your turn" image={<BulbArt />} tour="outro-3">
           <p>Which other numbers would help a driver? Distance to the next corner? How fast the car is turning? The ideas for the next levels start here.</p>
         </Card>
-      </Cards>
+      </Outro>
     </>
   );
 }

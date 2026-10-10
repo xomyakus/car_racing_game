@@ -161,6 +161,7 @@ kbd { font: 700 13px var(--mono); border: 2px solid var(--ink); border-bottom-wi
 .fold .foldhint { font: 900 11px var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--pos); }
 .fold .foldbody { display: grid; gap: 12px; margin-top: 12px; }
 .tile small.record { margin-top: 3px; padding-top: 3px; border-top: 1px dashed var(--rule); color: var(--red); }
+.tile small.record.place { margin-top: 0; padding-top: 1px; border-top: none; color: var(--ink); font-weight: 900; }
 .tile.me { background: #fde3dd; }
 
 canvas.net { display: block; width: 100%; aspect-ratio: 1/0.82; height: auto; }
@@ -316,3 +317,10 @@ svg.art, svg.perceptron { display: block; width: 100%; height: auto; }
 .champ .setup { display: block; margin-top: 3px; font: 800 10px/1.25 var(--body); color: var(--pos); background: #e7eefb; border-radius: 6px; padding: 2px 5px; max-width: 170px; }
 
 @media (prefers-reduced-motion: reduce) { .toast, .btn, .levelcard { transition: none; } }
+
+/* track tour: one saved brain raced on every track */
+.champ.tour td b.ok { color: var(--good); }
+.champ.tour td b.bad { color: var(--red); }
+.champ.tour .lvlcol small { display: block; font: 800 10px var(--body); color: var(--muted); }
+.champ.tour tr.now th, .champ.tour tr.now td { background: #e8f0ff; }
+.seg button[disabled] { opacity: .45; cursor: not-allowed; }

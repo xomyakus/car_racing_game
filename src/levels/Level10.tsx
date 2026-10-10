@@ -5,7 +5,8 @@ import { ExamBatch } from '../sim/examBatch';
 import { resultText } from '../sim/score';
 import { useFrame, useTick } from '../hooks';
 import { LabView } from '../components/LabView';
-import { Card, Cards, LevelHeader, useLab } from './common';
+import { OverfitArt, TryTracksArt, VarietyArt } from './art/Level10to14Art';
+import { Card, LevelHeader, Outro, useLab } from './common';
 
 const LAPS = 3, MAX_TRAIN = 4;
 const keyOf = (ids: TrackId[]) => `L10:${ids.join('+')}`;
@@ -40,7 +41,7 @@ export function Level10() {
       </LevelHeader>
       <section className="section">
         <div className="lessons">
-          <div className="panel lesson wide">
+          <div className="panel lesson wide" data-tour="trainchips">
             <h2>Training tracks</h2>
             <p className="small">Pick up to {MAX_TRAIN} tracks. Every test drive races {LAPS} laps on each one, and the brain is judged on all of them together. The tracks are simplified versions of real Formula 1 circuits.</p>
             <div className="trackchips">
@@ -67,7 +68,7 @@ export function Level10() {
       </section>
       <section className="section">
         <div className="lessons">
-          <div className="panel lesson wide">
+          <div className="panel lesson wide" data-tour="exam">
             <div className="sectionhead">
               <h2>The final exam: every track</h2>
               <button className="btn primary" disabled={!lab.best} onClick={runExam}>{lab.best ? `Run the exam with brain #${lab.best.no}` : 'Train a brain first'}</button>
@@ -95,17 +96,17 @@ export function Level10() {
           </div>
         </div>
       </section>
-      <Cards title="Memorising or understanding?">
-        <Card title="Overfitting">
+      <Outro n={10} title="Memorising or understanding?">
+        <Card title="Overfitting" image={<OverfitArt />} tour="outro-1">
           <p>A brain that only ever saw one track can learn tricks that only work there: "turn right after 2 seconds". That's called <b>overfitting</b>. On a new track those tricks crash the car.</p>
         </Card>
-        <Card title="More variety, better driver">
+        <Card title="More variety, better driver" image={<VarietyArt />} tour="outro-2">
           <p>Train on several different tracks and the only way to do well is to really use the rays. Brains trained like that usually pass more of the exam, even on tracks they never saw.</p>
         </Card>
-        <Card title="Try this">
+        <Card title="Try this" image={<TryTracksArt />} tour="outro-3">
           <p>Train on the home track only and run the exam. Then train on {F1_TRACK_IDS.length > 3 ? 'three or four F1 tracks' : 'several tracks'} and run it again. How many unseen tracks does each brain finish?</p>
         </Card>
-      </Cards>
+      </Outro>
     </>
   );
 }

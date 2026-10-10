@@ -7,7 +7,8 @@ import { pctText } from '../sim/score';
 import { useFrame, useTick } from '../hooks';
 import { LabView } from '../components/LabView';
 import { CompareTable } from '../components/CompareTable';
-import { Card, Cards, LevelHeader, useLab } from './common';
+import { NoiseArt, RobotsArt, TougherArt } from './art/Level10to14Art';
+import { Card, LevelHeader, Outro, useLab } from './common';
 
 const LEVELS = [0, 0.05, 0.1, 0.2];
 const EXAM_NOISE = [0, 0.05, 0.1, 0.2, 0.3];
@@ -40,7 +41,7 @@ export function Level11() {
       </LevelHeader>
       <section className="section">
         <div className="lessons">
-          <div className="panel lesson wide">
+          <div className="panel lesson wide" data-tour="noise">
             <h2>How noisy are the sensors during training?</h2>
             <div className="seg" role="group" aria-label="Training noise">
               {LEVELS.map(n => <button key={n} aria-pressed={noise === n} onClick={() => setNoise(n)}>{noiseName(n)} ({n})</button>)}
@@ -57,7 +58,7 @@ export function Level11() {
       </section>
       <section className="section">
         <div className="lessons">
-          <div className="panel lesson wide">
+          <div className="panel lesson wide" data-tour="stress">
             <div className="sectionhead">
               <h2>Stress test</h2>
               <button className="btn primary" disabled={!lab.best} onClick={runExam}>{lab.best ? `Test brain #${lab.best.no}` : 'Train a brain first'}</button>
@@ -86,17 +87,17 @@ export function Level11() {
           </div>
         </div>
       </section>
-      <Cards title="Why practise with noise?">
-        <Card title="Perfect-world brains are fragile">
+      <Outro n={11} title="Why practise with noise?">
+        <Card title="Perfect-world brains are fragile" image={<NoiseArt />} tour="outro-1">
           <p>A brain trained with perfect sensors can rely on tiny details in the numbers. Add a little noise and those details turn into nonsense.</p>
         </Card>
-        <Card title="Training with noise makes it tougher">
+        <Card title="Training with noise makes it tougher" image={<TougherArt />} tour="outro-2">
           <p>A brain that always practised with wobbly numbers learns to ignore small changes and pay attention to the big picture. It might be a bit slower, but it's harder to break.</p>
         </Card>
-        <Card title="Real robots do this">
+        <Card title="Real robots do this" image={<RobotsArt />} tour="outro-3">
           <p>Engineers add random noise on purpose when training robots and self-driving cars in simulation, so they still work in the messy real world.</p>
         </Card>
-      </Cards>
+      </Outro>
     </>
   );
 }

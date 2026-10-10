@@ -5,7 +5,7 @@ import { betterChampion, loadSaved } from '../sim/storage';
 import { countedLap, fmtTime, resultText } from '../sim/score';
 
 /** Entry screen: one card per level, in two parts. */
-export function Home({ onOpen }: { onOpen: (n: number) => void }) {
+export function Home({ onOpen, onTour }: { onOpen: (n: number) => void; onTour: () => void }) {
   const saved = loadSaved();
   const [champ, setChamp] = useState(false);
   const bestFor = (n: number): string | null => {
@@ -21,7 +21,10 @@ export function Home({ onOpen }: { onOpen: (n: number) => void }) {
       <header className="hero">
         <h1>Brain<span>Racers</span></h1>
         <p>A race car, a track, and a brain made of numbers. Drive it yourself, then build brains that learn to drive with nobody teaching them. Each level makes the brain a little smarter.</p>
-        <button className="btn" onClick={() => setChamp(true)}>🏆 Championship</button>
+        <div className="controls">
+          <button className="btn" onClick={() => setChamp(true)}>🏆 Championship</button>
+          <button className="btn" onClick={onTour}>🏁 Track tour</button>
+        </div>
       </header>
       {champ && <Championship onClose={() => setChamp(false)} />}
       {([1, 2] as const).map(part => (

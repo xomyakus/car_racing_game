@@ -4,7 +4,8 @@ import { REWARDS, RewardId, rewardScore } from '../sim/score';
 import { CompareTable } from '../components/CompareTable';
 import { SteerTrace } from '../components/SteerTrace';
 import { useTick } from '../hooks';
-import { Card, Cards, LevelHeader, TrainingSection } from './common';
+import { AskedArt, DesignRewardArt, SnailArt } from './art/Level10to14Art';
+import { Card, LevelHeader, Outro, TrainingSection } from './common';
 
 const ORDER: RewardId[] = ['race', 'survive', 'avgSpeed', 'smooth'];
 const EXPECT: Record<RewardId, string> = {
@@ -44,7 +45,7 @@ export function Level13() {
       </LevelHeader>
       <section className="section">
         <div className="lessons">
-          <div className="panel lesson wide">
+          <div className="panel lesson wide" data-tour="rules">
             <h2>Pick the rule</h2>
             <div className="rewardgrid">
               {ORDER.map(r => (
@@ -68,17 +69,17 @@ export function Level13() {
       </section>
       <TrainingSection key={key} n={13} labKey={key} config={config} sideTop={lab => <Side lab={lab} />}
         lead={<>Rule: <b>{REWARDS[reward].name}</b>. Every brain is scored by this rule only. The chart still shows how far the brains got, so you can see what the rule really rewards.</>} />
-      <Cards title="Reward hacking">
-        <Card title="Getting what you asked for">
+      <Outro n={13} title="Reward hacking">
+        <Card title="Getting what you asked for" image={<AskedArt />} tour="outro-1">
           <p>Evolution doesn't know what you <i>meant</i>. It only knows the score. If a silly trick gets a higher score, evolution will find it. This is called <b>reward hacking</b>.</p>
         </Card>
-        <Card title="The slow-poke trick">
+        <Card title="The slow-poke trick" image={<SnailArt />} tour="outro-2">
           <p>With "longest time on track", the best plan is to crawl round as slowly as the rules allow. The car isn't broken: it's doing exactly what it was rewarded for.</p>
         </Card>
-        <Card title="Designing good rewards">
+        <Card title="Designing good rewards" image={<DesignRewardArt />} tour="outro-3">
           <p>People who build AI spend a lot of time choosing rewards carefully, and checking what the AI actually does, not just its score.</p>
         </Card>
-      </Cards>
+      </Outro>
     </>
   );
 }
