@@ -99,6 +99,15 @@ button:focus-visible,input:focus-visible,.trackwrap:focus-visible{outline:3px so
 canvas.net{display:block;width:100%;aspect-ratio:1/0.82;height:auto}
 canvas.net.wide{aspect-ratio:1/0.62}
 canvas.chart{display:block;width:100%;aspect-ratio:1/0.62;height:auto}
+canvas.bchart{display:block;width:100%;aspect-ratio:1/0.66;height:auto}
+.gens{max-height:250px;overflow:auto;border:2px solid var(--ink);border-radius:10px}
+.gens table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.gens th{position:sticky;top:0;background:var(--ink);color:var(--paper);font:900 10px/1.2 var(--body);text-transform:uppercase;letter-spacing:.05em;text-align:left;padding:6px 8px;white-space:nowrap}
+.gens td{padding:5px 8px;border-top:1px solid var(--rule);font:700 12px/1.25 var(--mono);white-space:nowrap;vertical-align:top}
+.gens td small{display:block;font:800 10px/1.2 var(--body);color:var(--muted)}
+.gens tr.cur td{background:var(--mat)}
+.gens .ok{color:var(--good)}
+.gens .rnd{color:#8a5cf0}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;font-weight:800;color:var(--muted)}
 .legend i{display:inline-block;width:22px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
 
@@ -238,8 +247,22 @@ kbd{font:700 13px var(--mono);border:2px solid var(--ink);border-bottom-width:4p
         <p class="small">Lines light up when a signal is flowing through them. Thick lines are big weights.</p>
       </div>
       <div class="panel" data-for="brain">
-        <h2>Tested brains</h2>
+        <h2>Generations</h2>
         <p class="small" id="bsummary"></p>
+        <canvas class="bchart" id="bchart" aria-label="Chart of how far each tested brain got"></canvas>
+        <div class="legend">
+          <span><i style="background:var(--ink)"></i>best so far</span>
+          <span><i style="background:var(--pos);height:8px;width:8px;border-radius:50%"></i>child</span>
+          <span><i style="background:var(--good);height:8px;width:8px;border-radius:50%"></i>child that beat its parent</span>
+          <span><i style="background:#8a5cf0;height:8px;width:8px;border-radius:50%"></i>random</span>
+        </div>
+        <div class="gens"><table>
+          <thead><tr><th>Gen</th><th>Parent</th><th>Kids tried</th><th>Kids avg</th><th>New parent</th></tr></thead>
+          <tbody id="gens"></tbody>
+        </table></div>
+      </div>
+      <div class="panel" data-for="brain">
+        <h2>Tested brains</h2>
         <ol class="blist" id="blist"></ol>
         <p class="small">Tap a brain to watch it drive again. Same weights, same drive, every time.</p>
       </div>
@@ -295,7 +318,8 @@ kbd{font:700 13px var(--mono);border:2px solid var(--ink);border-bottom-width:4p
       <p>Each line is a weight, and each circle also has one extra number of its own, called a bias.</p>
       <div class="math">7 × 16 + 16 = 128<br>16 × 16 + 16 = 272<br>16 × 2 + 2 &nbsp;= 34<br><b>total = 434 weights</b></div>
       <p>Different weights make a different driver. Somewhere there's a set of 434 numbers that drives like a champion. Nobody knows them.</p>
-      <p>Press <b>New random brain</b> a few times. Almost every one crashes. Then press <b>Nudge the best brain</b>, or turn on <b>Auto</b>: each next brain is a copy of the best one so far, with a few weights nudged at random. Some children are worse, some are better, and the better ones become the new parent. Watch the best brain creep further around the track.</p>
+      <p>Press <b>New random brain</b> a few times. Almost every one crashes. Then press <b>Nudge the best brain</b>, or turn on <b>Auto</b>: each next brain is a copy of the best one so far, with a few weights nudged at random. Some children are worse, some are better, and the better ones become the new parent.</p>
+      <p>Every test drive is a <b>10-lap race</b>. First the brains learn to get further: a few %, then a full lap, then more laps. Once a brain finishes all 10 laps, only time counts: a child has to finish the race faster to become the new parent.</p>
       <p>Step 3 does the same thing with 20 cars racing at once.</p>
     </div>
     <div class="panel lesson" data-for="brain" style="grid-column:1/-1">
@@ -609,9 +633,12 @@ function stepDrive() {
 // one car at a time: every brain gets one test drive; results go into BR.list (newest first).
 // Auto mode evolves: the next brain is a nudged copy of the best one so far (a child).
 // When children keep failing to beat their parent, the nudges get bigger.
-const BR = { list: [], best: null, auto: false, speed: 1, randoms: 0, early: 0, kids: 0, better: 0, fails: 0, laps: 0 };
-const WHY = { wall: 'hit a wall', stuck: 'stood still', back: 'turned around', laps: '2 full laps!', time: 'still driving' };
-const brainScore = e => e.pct + (e.lapTime != null ? Math.max(0, 40 - e.lapTime) : 0);
+// A generation is one parent plus all the children nudged from it; it ends when a brain beats the parent.
+const BR = { list: [], best: null, auto: false, speed: 1, randoms: 0, early: 0, kids: 0, better: 0, fails: 0, laps: 0, gens: [], curGen: null, hist: [], finishers: 0 };
+// Each test drive is a 10-lap race. Score: distance first; once a brain finishes all 10 laps, faster total time wins.
+const RACE_LAPS = 10, LAP_LIMIT = 30;
+const WHY = { wall: 'hit a wall', stuck: 'stood still', back: 'turned around', race: `finished ${RACE_LAPS} laps!`, time: 'too slow' };
+const brainScore = e => e.raceTime != null ? RACE_LAPS * 100 + (1000 - e.raceTime) : e.pct;
 const nudgeSize = () => 0.35 * Math.min(3, 1 + 0.2 * BR.fails);
 function newBrainCar(champ, entry, parent) {
   brainIsChamp = !!champ; brainWait = 0;
@@ -619,7 +646,7 @@ function newBrainCar(champ, entry, parent) {
   else {
     if (!entry) {
       const brain = parent ? mutate(parent.brain, nudgeSize()) : randomBrain();
-      entry = { no: ++brainNo, brain, parent: parent ? parent.no : null, pct: 0, why: null, laps: 0, lapTime: null, counted: false, better: false };
+      entry = { no: ++brainNo, brain, parent: parent ? parent.no : null, gen: parent ? BR.curGen : null, pct: 0, why: null, laps: 0, raceTime: null, counted: false, better: false };
       BR.list.unshift(entry); if (BR.list.length > 100) BR.list.pop();
     } else { entry.why = null; }
     brainCar = newCar(entry.brain, entry.parent ? '#2a66d9' : '#8a5cf0'); brainCar.entry = entry;
@@ -630,7 +657,7 @@ function evolveBrain() { newBrainCar(false, null, BR.best || null); }
 function finishTest(c) {
   const e = c.entry; if (!e) return;
   e.pct = Math.max(0, c.maxProg / L * 100); e.why = c.why; e.laps = c.laps.length;
-  e.lapTime = c.laps.length ? Math.min(...c.laps) : null;
+  e.raceTime = c.why === 'race' ? c.t : null;
   if (!e.counted) {
     e.counted = true;
     if (e.parent) {
@@ -639,8 +666,24 @@ function finishTest(c) {
     } else { BR.randoms++; if (e.pct < 10) BR.early++; }
     if (e.laps && !BR.laps) toast('First full lap!', true);
     if (e.laps) BR.laps++;
+    if (e.raceTime != null && !BR.finishers++) toast(`Finished all ${RACE_LAPS} laps!`, true);
+    const g = e.gen;
+    if (g) {
+      g.tried++; g.sum += Math.min(200, e.pct);
+      if (!g.bestChild || brainScore(e) > brainScore(g.bestChild)) g.bestChild = e;
+    }
   }
-  if (!BR.best || brainScore(e) > brainScore(BR.best)) BR.best = e;
+  const newBest = !BR.best || brainScore(e) > brainScore(BR.best);
+  if (newBest) {
+    if (BR.curGen) BR.curGen.next = e;
+    BR.best = e;
+    BR.curGen = { n: BR.gens.length + 1, parent: e, tried: 0, sum: 0, bestChild: null, next: null };
+    BR.gens.push(BR.curGen);
+  }
+  if (BR.hist.length < 5000 && !e.histed) {
+    e.histed = true;
+    BR.hist.push({ pct: Math.min(RACE_LAPS * 100, e.pct), best: Math.min(RACE_LAPS * 100, BR.best.pct), time: e.raceTime, bestTime: BR.best.raceTime, kind: e.parent ? (e.better ? 'up' : 'kid') : 'rnd' });
+  }
   renderBrainList(); syncButtons();
 }
 function stepBrain() {
@@ -650,7 +693,8 @@ function stepBrain() {
     return;
   }
   stepAI(c, false);
-  if (c.alive && (c.laps.length >= 2 || c.t > 45)) { c.alive = false; c.done = true; c.why = c.laps.length >= 2 ? 'laps' : 'time'; }
+  if (c.alive && c.laps.length >= RACE_LAPS) { c.alive = false; c.done = true; c.why = 'race'; }
+  else if (c.alive && c.t - c.lapStart > LAP_LIMIT) { c.alive = false; c.why = 'time'; }
   if (!c.alive) finishTest(c);
 }
 
@@ -1081,27 +1125,109 @@ function renderLog() {
 function renderBrainList() {
   const cur = brainCar && brainCar.entry;
   $('#blist').innerHTML = BR.list.map(e => {
-    const pct = Math.min(100, e.pct), best = e === BR.best;
-    const whyCls = e.laps ? 'ok' : (e.why === 'wall' ? 'bad' : '');
+    const best = e === BR.best;
+    const whyCls = e.raceTime != null ? 'ok' : (e.why === 'wall' ? 'bad' : '');
     const why = e === cur && !e.why ? 'testing…' : (WHY[e.why] || 'not finished');
     const pill = best ? '<span class="pill">best</span>' : e.better ? '<span class="pill up">better</span>' : '';
     return `<li><button class="brow${e === cur ? ' cur' : ''}${best ? ' best' : ''}" id="brow${e.no}" data-no="${e.no}" aria-label="Test brain ${e.no} again">`
-      + `<span class="no">#${e.no}<small>${e.parent ? 'from #' + e.parent : 'random'}</small></span><span class="mbar"><i style="width:${pct.toFixed(1)}%${e.laps ? ';background:var(--good)' : ''}"></i></span>`
-      + `<span class="pct">${e.laps ? e.laps + (e.laps > 1 ? ' laps' : ' lap') : pct.toFixed(0) + '%'}</span>`
+      + `<span class="no">#${e.no}<small>${e.parent ? 'from #' + e.parent : 'random'}</small></span><span class="mbar"><i style="width:${(progFrac(e.pct) * 100).toFixed(1)}%${e.laps ? ';background:var(--good)' : ''}"></i></span>`
+      + `<span class="pct">${e.raceTime != null ? e.raceTime.toFixed(1) + 's' : shortProg(e.pct, e.laps)}</span>`
       + `<span class="why ${whyCls}">${why}${pill}</span></button></li>`;
   }).join('');
+  renderGens();
   const parts = [];
+  if (BR.curGen) parts.push(`Now on generation <b>${BR.curGen.n}</b>.`);
   if (BR.randoms) parts.push(`<b>${BR.randoms}</b> random brain${BR.randoms > 1 ? 's' : ''}: <b>${BR.early}</b> crashed before 10% of the lap.`);
   if (BR.kids) parts.push(`<b>${BR.kids}</b> nudged children: <b>${BR.better}</b> beat the best so far.`);
-  if (BR.best) parts.push(`Best: <b>#${BR.best.no}</b> (${BR.best.laps ? BR.best.laps + (BR.best.laps > 1 ? ' laps' : ' lap') : Math.min(100, BR.best.pct).toFixed(0) + '%'}). Nudge size now <b>${nudgeSize().toFixed(2)}</b>${BR.fails >= 5 ? `, growing after ${BR.fails} misses` : ''}.`);
-  $('#bsummary').innerHTML = parts.length ? parts.join(' ') : 'Each brain gets one test drive. The results show up here.';
+  if (BR.best) parts.push(`Best: <b>#${BR.best.no}</b> (${brainResult(BR.best)}). Nudge size now <b>${nudgeSize().toFixed(2)}</b>${BR.fails >= 5 ? `, growing after ${BR.fails} misses` : ''}.`);
+  $('#bsummary').innerHTML = `Goal: finish all <b>${RACE_LAPS} laps</b>, then finish them faster. `
+    + (parts.length ? parts.join(' ') : 'Each brain gets one test drive. The results show up here.');
+}
+// how far a brain got, in words a kid can read: "34%", "3.4 laps" or "10 laps in 98.2s"
+const pctText = p => p >= 100 ? `${(p / 100).toFixed(1)} laps` : `${p.toFixed(0)}%`;
+const brainResult = e => e.raceTime != null ? `${RACE_LAPS} laps, ${e.raceTime.toFixed(1)}s` : pctText(e.pct);
+const shortProg = (p, laps) => laps ? `${laps} lap${laps > 1 ? 's' : ''}` : `${Math.min(100, p).toFixed(0)}%`;
+// square-root scale so the first few % and the 10th lap both stay visible on one bar
+const progFrac = p => Math.sqrt(Math.max(0, Math.min(RACE_LAPS * 100, p)) / (RACE_LAPS * 100));
+function renderGens() {
+  $('#gens').innerHTML = BR.gens.length ? BR.gens.slice(-60).reverse().map(g => {
+    const cur = g === BR.curGen;
+    const next = g.next
+      ? `<span class="${g.next.parent ? 'ok' : 'rnd'}">#${g.next.no}</span><small>${g.next.parent ? 'child' : 'random'}, ${brainResult(g.next)}</small>`
+      : (cur ? 'trying…' : '—');
+    return `<tr class="${cur ? 'cur' : ''}"><td>${g.n}</td><td>#${g.parent.no}<small>${brainResult(g.parent)}</small></td>`
+      + `<td>${g.tried}</td><td>${g.tried ? pctText(g.sum / g.tried) : '—'}</td><td>${next}</td></tr>`;
+  }).join('') : '<tr><td colspan="5">No generations yet. Test a brain to start.</td></tr>';
+  drawBrainChart();
+}
+function drawBrainChart() {
+  const cv = $('#bchart'); if (!sizeCanvas(cv)) return;
+  const ctx = cv.getContext('2d'), w = cv.clientWidth, h = cv.clientHeight, d = cv.width / w;
+  ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, w, h);
+  const H2 = BR.hist, n = H2.length, pl = 50, pr = 8, pt = 16, pb = 16;
+  const raced = n > 0 && H2[n - 1].bestTime != null;
+  // top panel: distance (square-root scale); bottom panel appears once a brain finishes the race
+  const h1 = raced ? (h - pt - pb) * 0.56 : h - pt - pb, top2 = pt + h1 + 30, h2 = h - pb - top2;
+  const x = i => pl + (n <= 1 ? (w - pl - pr) / 2 : (w - pl - pr) * i / (n - 1));
+  const y = v => pt + (1 - progFrac(v)) * h1;
+  const dotCol = p => p.kind === 'up' ? COL.good : p.kind === 'rnd' ? 'rgba(138,92,240,.85)' : rgba(COL.pos, 0.45);
+  const r = n > 400 ? 1.6 : n > 120 ? 2.2 : 3;
+  ctx.lineWidth = 1;
+  ctx.font = '900 10px Nunito, sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = COL.muted;
+  ctx.fillText('HOW FAR EACH BRAIN GOT', pl, 10);
+  ctx.font = '700 10px "JetBrains Mono", monospace'; ctx.textAlign = 'right';
+  for (const [v, lab] of [[0, 'start'], [100, '1 lap'], [300, '3 laps'], [RACE_LAPS * 100, RACE_LAPS + ' laps']]) {
+    ctx.strokeStyle = COL.rule; ctx.beginPath(); ctx.moveTo(pl, y(v)); ctx.lineTo(w - pr, y(v)); ctx.stroke();
+    ctx.fillStyle = COL.muted; ctx.fillText(lab, pl - 6, y(v) + 3);
+  }
+  ctx.textAlign = 'left'; ctx.fillStyle = COL.muted;
+  if (n) ctx.fillText(`${n} brains tested →`, pl, h - 3);
+  if (!n) {
+    ctx.textAlign = 'center'; ctx.fillStyle = COL.ink; ctx.font = '800 13px Nunito, sans-serif';
+    ctx.fillText('Each test drive becomes a dot here', (w + pl) / 2, pt + h1 / 2);
+    return;
+  }
+  for (let i = 0; i < n; i++) {
+    const p = H2[i];
+    ctx.fillStyle = dotCol(p);
+    ctx.beginPath(); ctx.arc(x(i), y(p.pct), p.kind === 'up' ? r + 1.2 : r, 0, Math.PI * 2); ctx.fill();
+  }
+  const stepLine = (val, yf) => {
+    ctx.beginPath(); let on = false, lastY = 0;
+    H2.forEach((p, i) => {
+      const v = val(p); if (v == null) return;
+      if (!on) { ctx.moveTo(x(i), yf(v)); on = true; } else { ctx.lineTo(x(i), lastY); ctx.lineTo(x(i), yf(v)); }
+      lastY = yf(v);
+    });
+    ctx.strokeStyle = COL.ink; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1;
+  };
+  stepLine(p => p.best, y);
+  if (!raced) return;
+  // bottom panel: total time for the 10-lap race, faster is higher
+  const times = H2.filter(p => p.time != null).map(p => p.time);
+  let lo = Math.floor(Math.min(...times) - 1), hi = Math.ceil(Math.max(...times) + 1);
+  if (hi - lo < 2) hi = lo + 2;
+  const yt = t => top2 + (t - lo) / (hi - lo) * h2;
+  ctx.font = '900 10px Nunito, sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = COL.muted;
+  ctx.fillText(`${RACE_LAPS}-LAP RACE TIME (UP = FASTER)`, pl, top2 - 8);
+  ctx.font = '700 10px "JetBrains Mono", monospace'; ctx.textAlign = 'right';
+  for (const v of [lo, hi]) {
+    ctx.strokeStyle = COL.rule; ctx.beginPath(); ctx.moveTo(pl, yt(v)); ctx.lineTo(w - pr, yt(v)); ctx.stroke();
+    ctx.fillStyle = COL.muted; ctx.fillText(v + 's', pl - 6, yt(v) + 3);
+  }
+  for (let i = 0; i < n; i++) {
+    const p = H2[i]; if (p.time == null) continue;
+    ctx.fillStyle = dotCol(p);
+    ctx.beginPath(); ctx.arc(x(i), yt(p.time), p.kind === 'up' ? r + 1.2 : r, 0, Math.PI * 2); ctx.fill();
+  }
+  stepLine(p => p.bestTime, yt);
 }
 function updateBrainRow() {
   const c = brainCar; if (!c || !c.entry || !c.alive) return;
   const row = document.getElementById('brow' + c.entry.no); if (!row) return;
-  const pct = Math.max(0, Math.min(100, c.maxProg / L * 100));
-  row.querySelector('i').style.width = pct.toFixed(1) + '%';
-  row.querySelector('.pct').textContent = c.laps.length ? c.laps.length + (c.laps.length > 1 ? ' laps' : ' lap') : pct.toFixed(0) + '%';
+  const pct = Math.max(0, c.maxProg / L * 100);
+  row.querySelector('i').style.width = (progFrac(pct) * 100).toFixed(1) + '%';
+  row.querySelector('.pct').textContent = shortProg(pct, c.laps.length);
 }
 function syncButtons() {
   $('#evgo').textContent = EV.running ? 'Pause' : (EV.gen > 1 ? 'Keep evolving' : 'Start evolution');
@@ -1122,11 +1248,11 @@ function renderHud() {
     if (!started) html += `<span class="chip good">Press ↑ to go</span>`;
   } else if (mode === 'brain' && brainCar) {
     const pct = Math.max(0, brainCar.maxProg / L * 100);
-    html = `<span class="chip">${brainIsChamp ? 'Champion brain' : brainCar.entry && brainCar.entry.parent ? `Brain #${brainCar.entry.no}, child of #${brainCar.entry.parent}` : 'Random brain #' + (brainCar.entry ? brainCar.entry.no : brainNo)}</span><span class="chip">${pct >= 100 ? 'laps ' + brainCar.laps.length : pct.toFixed(0) + '% of a lap'}</span>`;
+    html = `<span class="chip">${brainIsChamp ? 'Champion brain' : brainCar.entry && brainCar.entry.parent ? `Brain #${brainCar.entry.no}, child of #${brainCar.entry.parent}` : 'Random brain #' + (brainCar.entry ? brainCar.entry.no : brainNo)}</span><span class="chip">${pct >= 100 ? `lap ${Math.min(RACE_LAPS, brainCar.laps.length + (brainCar.alive ? 1 : 0))} of ${RACE_LAPS}` : pct.toFixed(0) + '% of lap 1'}</span><span class="chip">${brainCar.t.toFixed(1)}s</span>`;
     if (BR.auto) html += `<span class="chip good">Auto ${BR.speed}×</span>`;
     if (!brainCar.alive) {
       const w = brainCar.why;
-      html += `<span class="chip ${brainCar.done ? 'good' : 'red'}">${w === 'laps' ? '2 full laps!' : w === 'time' ? 'Test time is up' : w === 'wall' ? 'Crashed into a wall' : w === 'back' ? 'Turned around' : 'Stood still'}${BR.auto ? ' · next brain…' : ''}</span>`;
+      html += `<span class="chip ${brainCar.done ? 'good' : 'red'}">${w === 'race' ? `Finished ${RACE_LAPS} laps in ${brainCar.t.toFixed(1)}s!` : w === 'time' ? `Too slow: a lap took over ${LAP_LIMIT}s` : w === 'wall' ? 'Crashed into a wall' : w === 'back' ? 'Turned around' : 'Stood still'}${BR.auto ? ' · next brain…' : ''}</span>`;
     }
   } else if (mode === 'evolve') {
     if (EV.parade) {
@@ -1150,7 +1276,7 @@ function setMode(m) {
   document.querySelectorAll('[data-for]').forEach(el => { el.hidden = !el.dataset.for.split(' ').includes(m); });
   for (const k in keys) keys[k] = false;
   if (m === 'brain' && !brainCar) newBrainCar(false);
-  if (m === 'brain') requestAnimationFrame(drawPlayground);
+  if (m === 'brain') requestAnimationFrame(() => { drawPlayground(); drawBrainChart(); });
   if (m === 'drive') renderLaps();
   setCam(camByMode[m]);
   syncButtons(); renderLog();
