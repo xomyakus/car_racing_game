@@ -10,7 +10,7 @@ export interface TrackRecords {
   /** fastest counted lap on this track: brains that finished, or you */
   lap: { time: number; who: string } | null;
   /** where this level's saved brain stands in the track's championship, if it has one */
-  place: { n: number; of: number } | null;
+  place: number | null;
 }
 
 function read(track: TrackId, key: string | null): TrackRecords {
@@ -31,7 +31,7 @@ function read(track: TrackId, key: string | null): TrackRecords {
     const myLap = countedLap(mine);
     const ahead = here.filter(c => c !== mine && betterChampion(c, mine)).length
       + (you != null && (myLap == null || you < myLap) ? 1 : 0);
-    place = { n: ahead + 1, of: here.length + (you != null ? 1 : 0) };
+    place = ahead + 1;
   }
   return { race: races[0] ? { time: races[0].raceTime!, level: races[0].level } : null, lap, place };
 }

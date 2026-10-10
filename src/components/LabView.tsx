@@ -95,9 +95,9 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
 
   const focus = lab.focus();
   const best = lab.best;
-  // this level's place among every racer saved on this track: brains from all levels, plus you
+  // this level's place in this track's championship
   const place = records?.place;
-  const placeLine = place && <small className="record place">championship: {ordinal(place.n)} of {place.of} racers{place.n <= 3 ? ` ${['🥇', '🥈', '🥉'][place.n - 1]}` : ''}</small>;
+  const placeLine = place && <small className="record place">championship: {ordinal(place)}{place <= 3 ? ` ${['🥇', '🥈', '🥉'][place - 1]}` : ''}</small>;
   const goal = lab.reward === 'race'
     ? <>Goal: finish all <b>{lab.raceLaps} laps</b>{multi ? <> on each of the <b>{lab.tracks.length} tracks</b></> : null}, then finish faster.</>
     : <>Reward rule: <b>{REWARDS[lab.reward].name}</b>. {REWARDS[lab.reward].rule}</>;
