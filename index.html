@@ -127,11 +127,13 @@ kbd{font:700 13px var(--mono);border:2px solid var(--ink);border-bottom-width:4p
 .verdict{font:400 20px/1.1 var(--display)}
 
 .blist{list-style:none;margin:0;padding:0 2px 0 0;display:grid;gap:3px;max-height:360px;overflow-y:auto}
-.brow{width:100%;display:grid;grid-template-columns:44px minmax(40px,1fr) 52px 118px;gap:8px;align-items:center;font:inherit;text-align:left;background:transparent;border:2px solid transparent;border-radius:10px;padding:5px 8px;cursor:pointer;color:var(--ink)}
+.brow{width:100%;display:grid;grid-template-columns:62px minmax(40px,1fr) 52px 124px;gap:8px;align-items:center;font:inherit;text-align:left;background:transparent;border:2px solid transparent;border-radius:10px;padding:5px 8px;cursor:pointer;color:var(--ink)}
 .brow:hover{border-color:var(--rule)}
 .brow.cur{border-color:var(--ink);background:var(--mat)}
 .brow.best:not(.cur){background:#fff3c4}
-.brow .no{font:700 13px var(--mono)}
+.brow .no{font:700 13px/1.15 var(--mono)}
+.brow .no small{display:block;font:800 10px/1.2 var(--body);color:var(--muted);white-space:nowrap}
+.pill.up{background:var(--good);color:var(--paper)}
 .brow .pct{font:700 13px var(--mono);text-align:right;font-variant-numeric:tabular-nums}
 .brow .why{font-size:13px;font-weight:800;color:var(--muted);white-space:nowrap}
 .brow .why.ok{color:var(--good)}
@@ -139,7 +141,7 @@ kbd{font:700 13px var(--mono);border:2px solid var(--ink);border-bottom-width:4p
 .mbar{display:block;height:10px;border:2px solid var(--ink);border-radius:6px;background:var(--paper);overflow:hidden}
 .mbar i{display:block;height:100%;background:var(--ray)}
 .pill{font:900 10px/1 var(--body);text-transform:uppercase;letter-spacing:.06em;background:var(--ray);color:var(--ink);border-radius:999px;padding:3px 6px;margin-left:4px;vertical-align:1px}
-@media (max-width:420px){.brow{grid-template-columns:40px minmax(30px,1fr) 46px 96px;gap:6px;padding:5px 4px}}
+@media (max-width:420px){.brow{grid-template-columns:56px minmax(30px,1fr) 44px 104px;gap:6px;padding:5px 4px}}
 @media (prefers-reduced-motion:reduce){.toast,.step,.btn{transition:none}}
 </style>
 
@@ -182,8 +184,9 @@ kbd{font:700 13px var(--mono);border:2px solid var(--ink);border-bottom-width:4p
       </div>
 
       <div class="controls" data-for="brain">
-        <button class="btn primary" id="newbrain">New random brain</button>
-        <label class="check"><input type="checkbox" id="bauto"> Auto: next brain after each test</label>
+        <button class="btn" id="newbrain">New random brain</button>
+        <button class="btn primary" id="nudgebrain" disabled>Nudge the best brain</button>
+        <label class="check"><input type="checkbox" id="bauto"> Auto: keep evolving the best</label>
         <span class="seglabel">Speed</span>
         <div class="seg" data-group="brain" role="group" aria-label="Test speed">
           <button data-speed="1" aria-pressed="true">1×</button>
@@ -292,7 +295,8 @@ kbd{font:700 13px var(--mono);border:2px solid var(--ink);border-bottom-width:4p
       <p>Each line is a weight, and each circle also has one extra number of its own, called a bias.</p>
       <div class="math">7 × 16 + 16 = 128<br>16 × 16 + 16 = 272<br>16 × 2 + 2 &nbsp;= 34<br><b>total = 434 weights</b></div>
       <p>Different weights make a different driver. Somewhere there's a set of 434 numbers that drives like a champion. Nobody knows them.</p>
-      <p>Turn on <b>Auto</b> at 20× and test 50 random brains. How many make it around the track? Almost none. That's why step 3 exists.</p>
+      <p>Press <b>New random brain</b> a few times. Almost every one crashes. Then press <b>Nudge the best brain</b>, or turn on <b>Auto</b>: each next brain is a copy of the best one so far, with a few weights nudged at random. Some children are worse, some are better, and the better ones become the new parent. Watch the best brain creep further around the track.</p>
+      <p>Step 3 does the same thing with 20 cars racing at once.</p>
     </div>
     <div class="panel lesson" data-for="brain" style="grid-column:1/-1">
       <h2>One circle up close</h2>
@@ -394,7 +398,7 @@ let N, L, CX, CY, TX, TY, NX, NY, LX, LY, RX, RY, S;
 // ---------- brains ----------
 function randomBrain() { const b = new Float32Array(NW); for (let i = 0; i < NW; i++) b[i] = Math.random() * 2 - 1; return b; }
 function gauss() { let u = 0, v = 0; while (!u) u = Math.random(); v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
-function mutate(p) { const c = new Float32Array(p); for (let i = 0; i < NW; i++) if (Math.random() < 0.12) c[i] += gauss() * 0.35; return c; }
+function mutate(p, size = 0.35) { const c = new Float32Array(p); for (let i = 0; i < NW; i++) if (Math.random() < 0.12) c[i] += gauss() * size; return c; }
 
 // ---------- cars ----------
 function newCar(brain, color, startIdx = 0, lat = 0) {
@@ -602,36 +606,47 @@ function stepDrive() {
 }
 
 // brain mode
-// every random brain gets one test drive; results go into BR.list (newest first)
-const BR = { list: [], tested: 0, early: 0, laps: 0, best: null, auto: false, speed: 1 };
+// one car at a time: every brain gets one test drive; results go into BR.list (newest first).
+// Auto mode evolves: the next brain is a nudged copy of the best one so far (a child).
+// When children keep failing to beat their parent, the nudges get bigger.
+const BR = { list: [], best: null, auto: false, speed: 1, randoms: 0, early: 0, kids: 0, better: 0, fails: 0, laps: 0 };
 const WHY = { wall: 'hit a wall', stuck: 'stood still', back: 'turned around', laps: '2 full laps!', time: 'still driving' };
-function newBrainCar(champ, entry) {
+const brainScore = e => e.pct + (e.lapTime != null ? Math.max(0, 40 - e.lapTime) : 0);
+const nudgeSize = () => 0.35 * Math.min(3, 1 + 0.2 * BR.fails);
+function newBrainCar(champ, entry, parent) {
   brainIsChamp = !!champ; brainWait = 0;
   if (champ) { brainCar = newCar(new Float32Array(EV.champ), COL.good); brainCar.entry = null; }
   else {
     if (!entry) {
-      entry = { no: ++brainNo, brain: randomBrain(), pct: 0, why: null, laps: 0, counted: false };
+      const brain = parent ? mutate(parent.brain, nudgeSize()) : randomBrain();
+      entry = { no: ++brainNo, brain, parent: parent ? parent.no : null, pct: 0, why: null, laps: 0, lapTime: null, counted: false, better: false };
       BR.list.unshift(entry); if (BR.list.length > 100) BR.list.pop();
     } else { entry.why = null; }
-    brainCar = newCar(entry.brain, '#8a5cf0'); brainCar.entry = entry;
+    brainCar = newCar(entry.brain, entry.parent ? '#2a66d9' : '#8a5cf0'); brainCar.entry = entry;
   }
-  renderBrainList();
+  renderBrainList(); syncButtons();
 }
+function evolveBrain() { newBrainCar(false, null, BR.best || null); }
 function finishTest(c) {
   const e = c.entry; if (!e) return;
   e.pct = Math.max(0, c.maxProg / L * 100); e.why = c.why; e.laps = c.laps.length;
+  e.lapTime = c.laps.length ? Math.min(...c.laps) : null;
   if (!e.counted) {
-    e.counted = true; BR.tested++;
-    if (e.pct < 10) BR.early++;
-    if (e.laps) { BR.laps++; toast('Lucky brain! A full lap!', true); }
+    e.counted = true;
+    if (e.parent) {
+      BR.kids++;
+      if (BR.best && brainScore(e) > brainScore(BR.best)) { e.better = true; BR.better++; BR.fails = 0; } else BR.fails++;
+    } else { BR.randoms++; if (e.pct < 10) BR.early++; }
+    if (e.laps && !BR.laps) toast('First full lap!', true);
+    if (e.laps) BR.laps++;
   }
-  if (!BR.best || e.pct > BR.best.pct) BR.best = e;
-  renderBrainList();
+  if (!BR.best || brainScore(e) > brainScore(BR.best)) BR.best = e;
+  renderBrainList(); syncButtons();
 }
 function stepBrain() {
   const c = brainCar; if (!c) return;
   if (!c.alive) {
-    if (BR.auto) { brainWait += DT; if (brainWait > 0.7) newBrainCar(false); }
+    if (BR.auto) { brainWait += DT; if (brainWait > 0.7) evolveBrain(); }
     return;
   }
   stepAI(c, false);
@@ -1069,14 +1084,17 @@ function renderBrainList() {
     const pct = Math.min(100, e.pct), best = e === BR.best;
     const whyCls = e.laps ? 'ok' : (e.why === 'wall' ? 'bad' : '');
     const why = e === cur && !e.why ? 'testing…' : (WHY[e.why] || 'not finished');
+    const pill = best ? '<span class="pill">best</span>' : e.better ? '<span class="pill up">better</span>' : '';
     return `<li><button class="brow${e === cur ? ' cur' : ''}${best ? ' best' : ''}" id="brow${e.no}" data-no="${e.no}" aria-label="Test brain ${e.no} again">`
-      + `<span class="no">#${e.no}</span><span class="mbar"><i style="width:${pct.toFixed(1)}%${e.laps ? ';background:var(--good)' : ''}"></i></span>`
+      + `<span class="no">#${e.no}<small>${e.parent ? 'from #' + e.parent : 'random'}</small></span><span class="mbar"><i style="width:${pct.toFixed(1)}%${e.laps ? ';background:var(--good)' : ''}"></i></span>`
       + `<span class="pct">${e.laps ? e.laps + (e.laps > 1 ? ' laps' : ' lap') : pct.toFixed(0) + '%'}</span>`
-      + `<span class="why ${whyCls}">${why}${best ? '<span class="pill">best</span>' : ''}</span></button></li>`;
+      + `<span class="why ${whyCls}">${why}${pill}</span></button></li>`;
   }).join('');
-  $('#bsummary').innerHTML = BR.tested
-    ? `Tested <b>${BR.tested}</b> random brain${BR.tested > 1 ? 's' : ''}. <b>${BR.early}</b> crashed before 10% of the lap. ${BR.laps ? `<b>${BR.laps}</b> finished a lap by pure luck.` : 'None has finished a lap yet.'}`
-    : 'Each random brain gets one test drive. The results show up here.';
+  const parts = [];
+  if (BR.randoms) parts.push(`<b>${BR.randoms}</b> random brain${BR.randoms > 1 ? 's' : ''}: <b>${BR.early}</b> crashed before 10% of the lap.`);
+  if (BR.kids) parts.push(`<b>${BR.kids}</b> nudged children: <b>${BR.better}</b> beat the best so far.`);
+  if (BR.best) parts.push(`Best: <b>#${BR.best.no}</b> (${BR.best.laps ? BR.best.laps + (BR.best.laps > 1 ? ' laps' : ' lap') : Math.min(100, BR.best.pct).toFixed(0) + '%'}). Nudge size now <b>${nudgeSize().toFixed(2)}</b>${BR.fails >= 5 ? `, growing after ${BR.fails} misses` : ''}.`);
+  $('#bsummary').innerHTML = parts.length ? parts.join(' ') : 'Each brain gets one test drive. The results show up here.';
 }
 function updateBrainRow() {
   const c = brainCar; if (!c || !c.entry || !c.alive) return;
@@ -1090,6 +1108,7 @@ function syncButtons() {
   $('#parade').disabled = !EV.champ || EV.champTime === null;
   $('#parade').textContent = EV.parade ? 'Stop parade' : 'Champion ×20 parade';
   $('#champbrain').disabled = !EV.champ;
+  $('#nudgebrain').disabled = !BR.best;
   $('#vsai').disabled = !EV.champ || EV.champTime === null;
   const ab = fmt(EV.champTime); $('#aibest').textContent = ab; $('#aibest1').textContent = ab;
 }
@@ -1103,7 +1122,7 @@ function renderHud() {
     if (!started) html += `<span class="chip good">Press ↑ to go</span>`;
   } else if (mode === 'brain' && brainCar) {
     const pct = Math.max(0, brainCar.maxProg / L * 100);
-    html = `<span class="chip">${brainIsChamp ? 'Champion brain' : 'Random brain #' + (brainCar.entry ? brainCar.entry.no : brainNo)}</span><span class="chip">${pct >= 100 ? 'laps ' + brainCar.laps.length : pct.toFixed(0) + '% of a lap'}</span>`;
+    html = `<span class="chip">${brainIsChamp ? 'Champion brain' : brainCar.entry && brainCar.entry.parent ? `Brain #${brainCar.entry.no}, child of #${brainCar.entry.parent}` : 'Random brain #' + (brainCar.entry ? brainCar.entry.no : brainNo)}</span><span class="chip">${pct >= 100 ? 'laps ' + brainCar.laps.length : pct.toFixed(0) + '% of a lap'}</span>`;
     if (BR.auto) html += `<span class="chip good">Auto ${BR.speed}×</span>`;
     if (!brainCar.alive) {
       const w = brainCar.why;
@@ -1160,6 +1179,7 @@ document.querySelectorAll('.pad button').forEach(b => {
 $('#restart').addEventListener('click', () => { resetHuman(); $('#trackwrap').focus(); });
 $('#vsai').addEventListener('change', () => { resetHuman(); $('#trackwrap').focus(); });
 $('#newbrain').addEventListener('click', () => newBrainCar(false));
+$('#nudgebrain').addEventListener('click', evolveBrain);
 $('#champbrain').addEventListener('click', () => newBrainCar(true));
 $('#evgo').addEventListener('click', () => { EV.parade = null; EV.running = !EV.running; syncButtons(); });
 $('#evreset').addEventListener('click', () => { resetEvolution(); });
