@@ -5,7 +5,7 @@ import { DT, RACE_LAPS } from '../sim/constants';
 import { Car, EndReason, newCar, progressPct, stepAI } from '../sim/car';
 import { carResult } from '../sim/exam';
 import type { SceneState } from '../sim/lab';
-import { TestResult, countedLap, fmtTime, pctText } from '../sim/score';
+import { TestResult, countedLap, fmtTime, pctText, raceScore } from '../sim/score';
 import { SavedChampion, championBrain, loadSaved } from '../sim/storage';
 import { TRACK_IDS, TrackId, getTrack, trackInfo } from '../sim/track';
 import { archText } from '../sim/brain';
@@ -17,27 +17,38 @@ const SPEEDS: Speed[] = [1, 5, 20, 'max'];
 const LAP_CHOICES = [1, 3, RACE_LAPS];
 /** seconds the finished car stays on screen before the next track starts */
 const PAUSE = 1.2;
+/** a car that hits a wall gets this many tries on a track; the best one counts */
+const MAX_TRIES = 5;
+/**
+ * Where each try starts, sideways from the middle of the road. A brain drives the same way every time
+ * from the same spot, so a retry starts a little to one side to give it a genuinely different run.
+ */
+const TRY_LAT = [0, 6, -6, 12, -12];
 
-interface Leg { track: TrackId; result: TestResult | null; why: EndReason | null }
+interface Leg { track: TrackId; result: TestResult | null; why: EndReason | null; tries: number }
+const freshLegs = (): Leg[] => TRACK_IDS.map(track => ({ track, result: null, why: null, tries: 0 }));
 
 /** One brain racing every track in turn. Mutable, like the labs; the screen re-reads it a few times a second. */
 class Tour {
   legs: Leg[];
   i = 0;
   car: Car | null = null;
+  /** tries already used on the current track */
+  tries = 0;
   running = false;
+  private best: { result: TestResult; why: EndReason | null } | null = null;
   private acc = 0;
   private wait = 0;
 
   constructor(readonly champ: SavedChampion, readonly laps: number) {
-    this.legs = TRACK_IDS.map(track => ({ track, result: null, why: null }));
+    this.legs = freshLegs();
   }
 
   get done() { return this.i >= this.legs.length; }
 
   start() {
-    this.legs = TRACK_IDS.map(track => ({ track, result: null, why: null }));
-    this.i = 0; this.acc = 0; this.wait = 0;
+    this.legs = freshLegs();
+    this.i = 0; this.acc = 0; this.wait = 0; this.tries = 0; this.best = null;
     this.running = true;
     this.car = this.newLegCar();
   }
@@ -45,13 +56,19 @@ class Tour {
   stop() { this.running = false; }
 
   private newLegCar() {
-    return newCar(championBrain(this.champ), '#e2412a', this.champ.spec, getTrack(this.legs[this.i].track));
+    return newCar(championBrain(this.champ), '#e2412a', this.champ.spec, getTrack(this.legs[this.i].track), 0, TRY_LAT[this.tries]);
   }
 
-  /** Close the current leg and move on to the next track, or end the tour. */
+  /** The car stopped: try again after a wall hit, otherwise close the leg and move on to the next track. */
   private finishLeg() {
     const c = this.car!;
-    this.legs[this.i] = { track: this.legs[this.i].track, result: carResult(c, this.laps), why: c.why };
+    const result = carResult(c, this.laps);
+    if (!this.best || raceScore(result) > raceScore(this.best.result)) this.best = { result, why: c.why };
+    this.tries++;
+    if (c.why === 'wall' && this.tries < MAX_TRIES) { this.car = this.newLegCar(); return; }
+    this.legs[this.i] = { track: this.legs[this.i].track, ...this.best, tries: this.tries };
+    this.best = null;
+    this.tries = 0;
     this.i++;
     if (this.done) { this.running = false; return; }
     this.car = this.newLegCar();
@@ -144,6 +161,7 @@ export function TrackTour() {
 
   const hud = c ? <>
     <span className="chip blue">{trackInfo(legs[Math.min(tour.i, legs.length - 1)].track).name} ({Math.min(tour.i + 1, legs.length)} of {legs.length})</span>
+    {busy && <span className="chip">try {tour.tries + 1} of {MAX_TRIES}</span>}
     {c.alive && <span className="chip">{c.laps.length ? `lap ${Math.min(laps, c.laps.length + 1)} of ${laps}` : `${progressPct(c).toFixed(0)}%`}</span>}
     {c.alive && <span className="chip">{c.t.toFixed(1)}s</span>}
     {!c.alive && c.why && <span className={`chip ${c.done ? 'good' : 'red'}`}>{WHY_TEXT[c.why]}{c.done ? ` in ${c.t.toFixed(1)}s` : ''}</span>}
@@ -184,7 +202,7 @@ export function TrackTour() {
           {doneLegs.length
             ? <>Finished <b>{finished.length} of {legs.length}</b> tracks · drove <b>{totalLaps.toFixed(1)}</b> of {laps * legs.length} laps
                 {allFinished ? <> · total time <b>{totalTime.toFixed(1)}s</b></> : finished.length ? <> · {totalTime.toFixed(1)}s on the tracks it finished</> : null}</>
-            : <>Each track is a race of {laps} lap{laps > 1 ? 's' : ''}, with the same rules as training: it ends on a wall, standing still, turning around or a lap that is too slow.</>}
+            : <>Each track is a race of {laps} lap{laps > 1 ? 's' : ''}, with the same rules as training: it ends on a wall, standing still, turning around or a lap that is too slow. A brain that hits a wall gets up to {MAX_TRIES} tries, each starting a little to the side, and its best try counts.</>}
         </p>
         <div className="champwrap">
           <table className="champ tour">
@@ -201,8 +219,8 @@ export function TrackTour() {
                   <tr key={l.track} className={now ? 'now' : ''}>
                     <th className="lvlcol">{trackInfo(l.track).name}{home && <small>trained here</small>}</th>
                     <td>{r
-                      ? <><b className={r.raceTime != null ? 'ok' : 'bad'}>{r.raceTime != null ? 'Finished' : pctText(r.pct)}</b><small>{l.why ? WHY_TEXT[l.why] : ''}</small></>
-                      : <span className="muted">{now ? 'racing…' : '—'}</span>}</td>
+                      ? <><b className={r.raceTime != null ? 'ok' : 'bad'}>{r.raceTime != null ? 'Finished' : pctText(r.pct)}</b><small>{l.why ? WHY_TEXT[l.why] : ''}</small>{l.tries > 1 && <small>best of {l.tries} tries</small>}</>
+                      : <span className="muted">{now ? `racing… try ${tour.tries + 1}` : '—'}</span>}</td>
                     <td>{r ? <b>{fmtTime(r.raceTime)}</b> : <span className="muted">—</span>}</td>
                     <td>{r ? <b>{fmtTime(lap)}</b> : <span className="muted">—</span>}</td>
                     <td className={r && lap != null && r.raceTime != null && rec != null && lap <= rec ? 'gold' : ''}>
