@@ -66,7 +66,7 @@ function Tuner() {
         <button className="btn" onClick={() => { setGas(EXAMPLE.gas); setSteer(EXAMPLE.steer); }}>Back to the example</button>
         <button className="btn ghost" onClick={() => { setGas(gas.map(() => 0)); setSteer(steer.map(() => 0)); }}>Set all to zero</button>
       </div>
-      <p className="small">The example finishes all 10 laps, slowly. Can you make it faster? After a test drive, press <b>Nudge the best brain</b> and let evolution improve your design.</p>
+      <p className="small">The example finishes all 10 laps, slowly. Can you make it faster? After a test drive, press <b>Start evolution</b> and let evolution improve your design.</p>
     </div>
   );
 }

@@ -109,6 +109,8 @@ export class Lab {
   mode: LabMode = 'single';
   /** single: start the next child automatically; pop: keep running generations */
   auto = false;
+  /** frozen: nothing moves until resumed */
+  paused = false;
   speed: Speed = 1;
 
   list: Entry[] = [];
@@ -179,6 +181,7 @@ export class Lab {
     if (!this.best) return;
     this.setMode('single');
     this.auto = false;
+    this.paused = false;
     this.current = null;
     this.exam = { label, result: null, why: null };
     this.car = newCar(this.best.brain, ORIGIN_COLOR.champion, spec, track);
@@ -195,6 +198,7 @@ export class Lab {
     return e;
   }
   private start(e: Entry) {
+    this.paused = false;
     this.current = e;
     this.exam = null;
     this.leg = 0;
@@ -346,7 +350,12 @@ export class Lab {
 
   // ---------- running ----------
   /** Is there anything to simulate right now? */
-  busy() { return this.mode === 'pop' ? this.auto : this.auto || !!this.car?.alive; }
+  busy() { return !this.paused && (this.mode === 'pop' ? this.auto : this.auto || !!this.car?.alive); }
+
+  /** Evolution: keep testing nudged copies of the best brain. */
+  startEvolution() { this.setMode('single'); this.auto = true; this.paused = false; }
+  /** Test exactly one more brain, then stop. */
+  oneStep() { this.auto = false; this.nudgeBest(); }
 
   advance(el: number) {
     if (!this.busy()) { this.acc = 0; return; }

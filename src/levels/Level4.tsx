@@ -33,8 +33,8 @@ export function Level4() {
           <p>With 434 knobs, a random brain is even more lost at first, and each nudge changes a smaller part of it. It can take more brains to finish the first lap than in level 3.</p>
           <p>Once it gets going, it has room to learn finer driving and faster race times.</p>
         </Card>
-        <Card title="Try both modes">
-          <p><b>One at a time</b> nudges a single parent. <b>20 at once</b> races 20 cars and keeps the 5 best as parents. Which one finds a fast driver sooner?</p>
+        <Card title="Be patient">
+          <p>Use <b>Max</b> speed and let evolution run for a while. Watch the generations table: most children are worse than their parent, but every now and then one is better.</p>
         </Card>
         <Card title="Is bigger always better?">
           <p>Not always. Sometimes a small brain trains faster and ends up just as quick. In level 5 you decide the shape yourself.</p>

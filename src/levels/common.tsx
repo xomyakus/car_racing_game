@@ -44,7 +44,7 @@ export function TrainingSection({ n, labKey, config, sideTop, showWeights, lead,
     <section className="section">
       <h2 className="sectiontitle">{title}</h2>
       <p className="sectionlead">
-        {lead ?? <>Test one brain at a time and keep nudging the best one, or race 20 cars at once.
+        {lead ?? <>Press <b>Start evolution</b>: the first brain is random, then every next brain is the best one so far with a few weights nudged.
         Every test drive is a {lab.raceLaps}-lap race: first the brains learn to get further, then to get faster.</>}
       </p>
       <LabView key={labKey} lab={lab} level={n} saveKey={labKey} onReset={reset} sideTop={sideTop?.(lab)} showWeights={showWeights} />

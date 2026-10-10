@@ -59,11 +59,11 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights }: 
       {(multi || c.track.id !== 'classic') && <span className="chip">{c.track.name}{multi && cur && !lab.exam ? ` (${lab.leg + 1} of ${lab.tracks.length})` : ''}</span>}
       <span className="chip">{lapChip(c)}</span>
       <span className="chip">{c.t.toFixed(1)}s</span>
-      {lab.auto && <span className="chip good">Auto {lab.speed === 'max' ? 'Max' : `${lab.speed}×`}</span>}
+      {lab.auto && <span className="chip good">{lab.paused ? 'Paused' : `Evolving ${lab.speed === 'max' ? 'Max' : `${lab.speed}×`}`}</span>}
       {!c.alive && c.why && <span className={`chip ${c.done ? 'good' : 'red'}`}>{WHY_LONG[c.why]}{c.done ? ` in ${c.t.toFixed(1)}s` : ''}{lab.auto ? ' · next brain…' : ''}</span>}
     </>;
   } else if (single) {
-    hud = <span className="chip good">Press “New random brain” to start</span>;
+    hud = <span className="chip good">Press “Start evolution”</span>;
   } else {
     const alive = lab.pop.filter(x => x.alive).length, fin = lab.pop.filter(x => x.done).length;
     const lead = lab.focus();
@@ -87,28 +87,19 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights }: 
       <div className="stage">
         <div className="board">
           <TrackStage label="Race track" advance={el => lab.advance(el)} scene={() => lab.sceneState()} hud={hud} toast={toast} />
-          <div className="controls">
-            <div className="seg" data-tour="lab-mode" role="group" aria-label="Training mode">
-              <button aria-pressed={single} onClick={() => lab.setMode('single')}>One at a time</button>
-              <button aria-pressed={!single} onClick={() => lab.setMode('pop')}>{POP} at once</button>
-            </div>
+          <div className="controls" data-tour="lab-buttons">
+            <button className="btn primary" data-tour="lab-mode"
+              onClick={() => { if (lab.auto) lab.paused = !lab.paused; else lab.startEvolution(); }}>
+              {lab.auto ? (lab.paused ? '▶ Resume' : '❚❚ Pause') : best ? '▶ Keep evolving' : '▶ Start evolution'}
+            </button>
+            <button className="btn" disabled={(lab.auto && !lab.paused) || (!lab.paused && !!lab.car?.alive)} onClick={() => lab.oneStep()}>One step</button>
             <span className="seglabel">Speed</span>
             <div className="seg" data-tour="lab-speed" role="group" aria-label="Simulation speed">
               {SPEEDS.map(s => (
                 <button key={s} aria-pressed={lab.speed === s} onClick={() => { lab.speed = s; }}>{s === 'max' ? 'Max' : `${s}×`}</button>
               ))}
             </div>
-          </div>
-          <div className="controls" data-tour="lab-buttons">
-            {single ? <>
-              <button className="btn" onClick={() => lab.newRandom()}>New random brain</button>
-              <button className="btn primary" disabled={!best} onClick={() => lab.nudgeBest()}>Nudge the best brain</button>
-              <label className="check"><input type="checkbox" checked={lab.auto} onChange={e => { lab.auto = e.target.checked; }} /> Auto: keep evolving the best</label>
-            </> : <>
-              <button className="btn primary" onClick={() => { lab.auto = !lab.auto; }}>{lab.auto ? 'Pause' : lab.popGen > 1 ? 'Keep evolving' : 'Start evolving'}</button>
-              <span className="hint">{lab.best ? 'Started from your best brain so far.' : 'Starting from 20 random brains.'}</span>
-            </>}
-            <button className="btn ghost" onClick={onReset}>Start over</button>
+            <button className="btn ghost small" onClick={onReset}>Start over</button>
           </div>
         </div>
         <aside className="side">
