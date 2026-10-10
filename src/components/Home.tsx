@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { LEVELS, PARTS } from '../levels';
 import { Championship } from './Championship';
-import { loadSaved } from '../sim/storage';
-import { fmtTime, raceScore, resultText } from '../sim/score';
+import { betterChampion, loadSaved } from '../sim/storage';
+import { fmtTime, resultText } from '../sim/score';
 
 /** Entry screen: one card per level, in two parts. */
 export function Home({ onOpen }: { onOpen: (n: number) => void }) {
@@ -12,8 +12,8 @@ export function Home({ onOpen }: { onOpen: (n: number) => void }) {
     if (n === 1) return saved.humanBest.classic != null ? `Your best lap: ${fmtTime(saved.humanBest.classic)}` : null;
     const champs = Object.values(saved.champions).filter(c => c.level === n);
     if (!champs.length) return null;
-    const top = champs.reduce((a, b) => (raceScore(b) > raceScore(a) ? b : a));
-    return `Best brain: ${resultText(top)}`;
+    const top = champs.reduce((a, b) => (betterChampion(b, a) ? b : a));
+    return top.bestLap != null ? `Fastest lap: ${fmtTime(top.bestLap)}` : `Best brain: ${resultText(top)}`;
   };
   return (
     <main className="wrap home">

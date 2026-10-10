@@ -7,6 +7,8 @@ export interface RaceResult {
   raceTime: number | null;
   /** laps in the whole race (all tracks together); defaults to RACE_LAPS */
   of?: number;
+  /** fastest single lap, or null if it never finished a lap */
+  bestLap?: number | null;
 }
 
 /** A race result plus how the brain drove, for rewards that care about style. */

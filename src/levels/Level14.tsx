@@ -97,7 +97,7 @@ export function Level14() {
     w.saved = true;
     const r = carResult(c, WATCH_LAPS);
     saveChampion(`L14@${c.track.id}`, {
-      layers: cc.layers, spec: BASIC, w: Array.from(c.brain.w), pct: r.pct, raceTime: r.raceTime, of: WATCH_LAPS, level: 14,
+      layers: cc.layers, spec: BASIC, w: Array.from(c.brain.w), pct: r.pct, raceTime: r.raceTime, bestLap: r.bestLap, of: WATCH_LAPS, level: 14,
       name: `Level 14 · your copycat (${archText(cc.layers)}) · ${c.track.name}`, track: c.track.id, tracks: [c.track.id], setup: `copycat ${archText(cc.layers)}`,
       tests: 1, epochs: cc.epochs, savedAt: Date.now(),
     });

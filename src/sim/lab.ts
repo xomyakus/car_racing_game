@@ -139,6 +139,10 @@ export class Lab {
   onEvent: ((msg: string, good?: boolean) => void) | null = null;
   /** called whenever a new best brain is found */
   onBest: ((e: Entry) => void) | null = null;
+  /** the brain with the fastest single lap so far (not always the best racer) */
+  fastestLap: Entry | null = null;
+  /** called whenever a brain sets a new fastest lap */
+  onFastLap: ((e: Entry) => void) | null = null;
 
   private no = 0;
   private wait = 0;
@@ -249,12 +253,18 @@ export class Lab {
       if (e.gen) { e.gen.tried++; e.gen.sum += this.cap(e.pct); }
     }
     this.considerBest(e);
+    this.considerLap(e);
     if (this.hist.length < 5000) {
       this.hist.push({
         pct: this.cap(e.pct), best: this.cap(this.best!.pct), time: e.raceTime, bestTime: this.best!.raceTime,
         kind: e.origin === 'child' ? (e.better ? 'up' : 'kid') : e.origin === 'random' ? 'rnd' : 'hand',
       });
     }
+  }
+  private considerLap(e: Entry) {
+    if (e.bestLap == null || (this.fastestLap?.bestLap != null && e.bestLap >= this.fastestLap.bestLap)) return;
+    this.fastestLap = e;
+    this.onFastLap?.(e);
   }
   /** A new best brain becomes the parent and starts a new generation. */
   private considerBest(e: Entry) {
@@ -324,6 +334,12 @@ export class Lab {
       const e = this.addEntry(cloneBrain(top.b), 'pop', null, `gen ${this.popGen} winner`);
       Object.assign(e, top.r, { legs: top.legs, why: top.why, laps: top.laps, score: top.s, counted: true });
       this.considerBest(e);
+    }
+    const quick = res.filter(x => x.r.bestLap != null).sort((a, b) => a.r.bestLap! - b.r.bestLap!)[0];
+    if (quick && (this.fastestLap?.bestLap == null || quick.r.bestLap! < this.fastestLap.bestLap)) {
+      const e = this.addEntry(cloneBrain(quick.b), 'pop', null, `gen ${this.popGen} fastest lap`);
+      Object.assign(e, quick.r, { legs: quick.legs, why: quick.why, laps: quick.laps, score: quick.s, counted: true });
+      this.considerLap(e);
     }
     const g = this.popGen, best = this.best!;
     if (g === 1) this.log(`Most crashed right away. The best one got ${Math.min(100, top.r.pct).toFixed(0)}% of a lap.`);

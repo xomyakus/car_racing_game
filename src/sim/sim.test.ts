@@ -178,3 +178,27 @@ describe('championship set-up text', () => {
     expect(sensorText({ ...withFeatures(BASIC, ['timeToCrash']), noise: 0.1 })).toBe('+ time to crash · noise 0.1');
   });
 });
+
+describe('championship by best lap', () => {
+  it('ranks the fastest single lap first, whatever the race length', async () => {
+    const { betterChampion } = await import('./storage');
+    const tenLaps = { pct: 1000, raceTime: 85, of: 10, bestLap: 8.1 };
+    const threeLaps = { pct: 300, raceTime: 25, of: 3, bestLap: 7.9 };
+    const crashed = { pct: 160, raceTime: null, of: 10, bestLap: 8.0 };
+    const noLap = { pct: 90, raceTime: null, of: 10, bestLap: null };
+    expect(betterChampion(threeLaps, tenLaps)).toBe(true);
+    expect(betterChampion(crashed, tenLaps)).toBe(true);
+    expect(betterChampion(tenLaps, noLap)).toBe(true);
+    expect(betterChampion({ ...noLap, pct: 95 }, noLap)).toBe(true);
+  });
+
+  it('records the fastest lap of a drive', async () => {
+    const { carResult } = await import('./exam');
+    const gas = [0, 0, 2.2, 0, 0, -1.6, 0, -0.2], steer = [-1.5, -1, 0, 1, 1.5, 0, -1, 0];
+    const c = newCar({ layers: [7, 2], w: new Float32Array([...gas, ...steer]) }, 'x');
+    while (c.alive) stepAI(c, 3);
+    const r = carResult(c, 3);
+    expect(r.bestLap).toBe(Math.min(...c.laps));
+    expect(r.bestLap!).toBeLessThan(r.raceTime! / 2);
+  });
+});

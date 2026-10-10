@@ -273,6 +273,7 @@ svg.art, svg.perceptron { display: block; width: 100%; height: auto; }
 .champ td.gold { background: #fff3c4; }
 .leaderboard { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .leaderboard li { display: grid; grid-template-columns: 44px 120px minmax(0, 1fr); gap: 12px; align-items: center; padding: 8px 12px; border: 2px solid var(--rule); border-radius: 12px; background: var(--paper); }
+.leaderboard li.you { border-style: dashed; border-color: var(--red); }
 .leaderboard li.first { border-color: var(--ink); background: #fff3c4; }
 .leaderboard .rank { font: 400 20px var(--display); text-align: center; }
 .leaderboard .result b { display: block; font: 700 18px var(--mono); }

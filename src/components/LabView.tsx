@@ -46,13 +46,14 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
     lab.onEvent = showToast;
     const multiTrack = lab.tracks.length > 1;
     const where = multiTrack ? lab.tracks.map(t => t.name).join(' + ') : lab.tracks[0].name;
-    lab.onBest = e => saveChampion(saveKey, {
-      layers: lab.layers, spec: lab.spec, w: Array.from(e.brain.w), pct: e.pct, raceTime: e.raceTime, of: e.of,
+    // the championship keeps whichever is better: a new best racer or a new fastest lap
+    lab.onBest = lab.onFastLap = e => saveChampion(saveKey, {
+      layers: lab.layers, spec: lab.spec, w: Array.from(e.brain.w), pct: e.pct, raceTime: e.raceTime, of: e.of, bestLap: e.bestLap,
       level, name: `Level ${level} · ${archText(lab.layers)} · ${where}`,
       track: multiTrack ? 'multi' : lab.tracks[0].id, tracks: lab.tracks.map(t => t.id), setup: setupText(lab),
       tests: lab.testsDone, generation: lab.mode === 'pop' ? lab.popGen : lab.gens.length, reward: lab.reward, savedAt: Date.now(),
     });
-    return () => { lab.onEvent = null; lab.onBest = null; };
+    return () => { lab.onEvent = null; lab.onBest = null; lab.onFastLap = null; };
   }, [lab, saveKey, level, showToast]);
 
   const single = lab.mode === 'single';
@@ -137,6 +138,9 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
               {single
                 ? <div className="tile"><span>Generation</span><b>{lab.curGen?.n ?? 0}</b><small>{lab.stats.kids} children tried</small></div>
                 : <div className="tile"><span>Generation</span><b>{lab.popGen}</b><small>{POP} cars per race</small></div>}
+              <div className="tile"><span>Fastest lap</span><b>{lab.fastestLap?.bestLap != null ? `${lab.fastestLap.bestLap.toFixed(2)}s` : '—'}</b>
+                <small>{lab.fastestLap ? `brain #${lab.fastestLap.no}${lab.fastestLap === best ? ', the best brain' : ''}` : 'no full lap yet'}</small></div>
+              <div className="tile"><span>Test drives</span><b>{lab.testsDone}</b><small>{lab.tracks.length > 1 ? `${lab.tracks.length} tracks each` : lab.tracks[0].name}</small></div>
             </div>
             <p className="small">
               {goal}{' '}

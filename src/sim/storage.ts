@@ -1,7 +1,6 @@
 import { Brain } from './brain';
 import { SensorSpec } from './sensors';
 import { RaceResult, RewardId, raceScore } from './score';
-import { RACE_LAPS } from './constants';
 import type { TrackId } from './track';
 
 /** The best brain a lab has found, kept in this browser so it survives a reload. */
@@ -58,10 +57,17 @@ function write(s: Saved) {
 export function saveHumanBest(track: TrackId, t: number) { const s = loadSaved(); s.humanBest[track] = t; write(s); }
 export function saveBuilder(hidden: number[]) { const s = loadSaved(); s.builder = hidden; write(s); }
 
-/** Keep `c` as the champion for `key` unless an equally long race was already done better. */
+/** Is `a` a better championship result than `b`? Fastest single lap wins; brains that never finished a lap are compared by race result. */
+export function betterChampion(a: RaceResult, b: RaceResult): boolean {
+  if (a.bestLap != null && b.bestLap != null) return a.bestLap < b.bestLap;
+  if (a.bestLap != null || b.bestLap != null) return a.bestLap != null;
+  return raceScore(a) > raceScore(b);
+}
+
+/** Keep `c` as the champion for `key` unless the one already saved there is at least as good. */
 export function saveChampion(key: string, c: SavedChampion) {
   const s = loadSaved(), old = s.champions[key];
-  if (old && (old.of ?? RACE_LAPS) === (c.of ?? RACE_LAPS) && raceScore(old) >= raceScore(c)) return;
+  if (old && !betterChampion(c, old)) return;
   s.champions[key] = c;
   write(s);
 }

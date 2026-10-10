@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LEVELS } from '../levels';
-import { SavedChampion, championBrain, loadSaved } from '../sim/storage';
+import { SavedChampion, betterChampion, championBrain, loadSaved } from '../sim/storage';
 import { inputLabels } from '../sim/sensors';
 import { NetDiagram } from './NetDiagram';
 import { RACE_LAPS } from '../sim/constants';
@@ -81,16 +81,30 @@ function BrainDetails({ c }: { c: SavedChampion }) {
   );
 }
 
-/** Every saved brain that raced on one track, in finishing order. */
+/** Total race time, or how far it got: "10 laps in 87.8s" / "4.2 of 10 laps". */
+const totalText = (c: SavedChampion) => {
+  const of = c.of ?? RACE_LAPS;
+  return c.raceTime != null ? `all ${of} laps in ${c.raceTime.toFixed(1)}s` : `${pctText(c.pct)} of ${of} laps`;
+};
+
+/** Every saved brain (and you) on one track, fastest single lap first. */
 function Leaderboard({ champs, humanBest }: ViewProps) {
   const counts = new Map<Col, number>();
   for (const c of champs) counts.set(trackOf(c), (counts.get(trackOf(c)) ?? 0) + 1);
+  for (const t of Object.keys(humanBest) as TrackId[]) counts.set(t, (counts.get(t) ?? 0) + 1);
   const busiest = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
   const [track, setTrack] = useState<Col>(busiest ?? 'classic');
-  const here = champs.filter(c => trackOf(c) === track);
-  // only races of the same length can be compared, so each length gets its own list
-  const lengths = [...new Set(here.map(c => c.of ?? RACE_LAPS))].sort((a, b) => b - a);
   const you = track === 'multi' ? undefined : humanBest[track];
+  type Row = { kind: 'brain'; c: SavedChampion } | { kind: 'you'; lap: number };
+  const rows: Row[] = [...ranked(champs.filter(c => trackOf(c) === track)).map(c => ({ kind: 'brain' as const, c }))];
+  if (you != null) rows.push({ kind: 'you', lap: you });
+  const lapOf = (r: Row) => (r.kind === 'you' ? r.lap : r.c.bestLap ?? null);
+  rows.sort((a, b) => {
+    const la = lapOf(a), lb = lapOf(b);
+    if (la != null && lb != null) return la - lb;
+    if (la != null || lb != null) return la != null ? -1 : 1;
+    return a.kind === 'brain' && b.kind === 'brain' ? raceScore(b.c) - raceScore(a.c) : 0;
+  });
   return (
     <>
       <div className="controls">
@@ -100,34 +114,31 @@ function Leaderboard({ champs, humanBest }: ViewProps) {
         </select>
         {track !== 'multi' && <span className="hint">{trackInfo(track).fact}</span>}
       </div>
-      {you != null && <p className="small">Your own best single lap here: <b>{you.toFixed(2)}s</b>. Brains are timed over whole races, so they are ranked separately.</p>}
-      {!here.length && <p><b>No brains have raced here yet.</b> Pick this track with the track menu over any level's track view and start evolution.</p>}
-      {lengths.map(len => {
-        const list = ranked(here.filter(c => (c.of ?? RACE_LAPS) === len));
-        return (
-          <div key={len} className="board">
-            <h3>{len}-lap race{len === RACE_LAPS ? '' : 's'}</h3>
-            <ol className="leaderboard">
-              {list.map((c, i) => (
-                <li key={`${c.level}-${c.setup}-${i}`} className={i === 0 ? 'first' : ''}>
-                  <span className="rank">{MEDALS[i] ?? i + 1}</span>
-                  <span className="result">
-                    <b>{c.raceTime != null ? `${c.raceTime.toFixed(1)}s` : pctText(c.pct)}</b>
-                    <small>{c.raceTime != null ? 'finished' : `didn't finish ${len} laps`}</small>
-                  </span>
-                  <span className="who">
-                    <b>Level {c.level} · {levelTitle(c.level)}</b>
-                    <small>{c.setup ?? archText(c.layers)}</small>
-                    {c.tracks && c.tracks.length > 1 && <small>raced on {c.tracks.map(t => trackInfo(t).name).join(' + ')}</small>}
-                    <small className="stats">{statsText(c)}</small>
-                  </span>
-                  <BrainDetails c={c} />
-                </li>
-              ))}
-            </ol>
-          </div>
-        );
-      })}
+      <p className="small">Ranked by <b>fastest single lap</b>, so races of any length (and your own driving) can be compared. The total race time is shown too.</p>
+      {!rows.length && <p><b>Nobody has raced here yet.</b> Drive it in level 1, or pick this track with the track menu over any level's track view and start evolution.</p>}
+      <ol className="leaderboard">
+        {rows.map((r, i) => {
+          const lap = lapOf(r);
+          return (
+            <li key={r.kind === 'you' ? 'you' : `${r.c.level}-${r.c.setup}-${i}`} className={`${i === 0 && lap != null ? 'first' : ''}${r.kind === 'you' ? ' you' : ''}`}>
+              <span className="rank">{lap == null ? '–' : MEDALS[i] ?? i + 1}</span>
+              <span className="result">
+                <b>{lap != null ? `${lap.toFixed(2)}s` : r.kind === 'brain' ? pctText(r.c.pct) : '—'}</b>
+                <small>{lap != null ? 'best lap' : r.kind === 'brain' && r.c.bestLap === undefined ? 'lap time not recorded' : 'no full lap'}</small>
+              </span>
+              {r.kind === 'you'
+                ? <span className="who"><b>You · Level 1</b><small>your own driving, with the arrow keys</small></span>
+                : <span className="who">
+                    <b>Level {r.c.level} · {levelTitle(r.c.level)}</b>
+                    <small>{r.c.setup ?? archText(r.c.layers)}</small>
+                    {r.c.tracks && r.c.tracks.length > 1 && <small>raced on {r.c.tracks.map(t => trackInfo(t).name).join(' + ')}</small>}
+                    <small className="stats">{totalText(r.c)} · {statsText(r.c)}</small>
+                  </span>}
+              {r.kind === 'brain' && <BrainDetails c={r.c} />}
+            </li>
+          );
+        })}
+      </ol>
     </>
   );
 }
@@ -136,23 +147,19 @@ function Leaderboard({ champs, humanBest }: ViewProps) {
 function Grid({ champs, humanBest }: ViewProps) {
   const cell = (level: number, col: Col): SavedChampion | null => {
     const mine = champs.filter(c => c.level === level && trackOf(c) === col);
-    return mine.length ? ranked(mine)[0] : null;
+    return mine.length ? mine.reduce((a, b) => (betterChampion(b, a) ? b : a)) : null;
   };
-  // the fastest full 10-lap race on each track gets the trophy
-  const winner = new Map<Col, SavedChampion>();
+  // the fastest single lap on each track gets the trophy, you included
+  const fastest = new Map<Col, number>();
   for (const col of COLS) {
-    for (const l of LEVELS) {
-      const c = cell(l.n, col);
-      if (!c || c.raceTime == null || (c.of ?? RACE_LAPS) !== RACE_LAPS) continue;
-      const w = winner.get(col);
-      if (!w || raceScore(c) > raceScore(w)) winner.set(col, c);
-    }
+    const laps = LEVELS.map(l => (l.n === 1 ? (col === 'multi' ? undefined : humanBest[col]) : cell(l.n, col)?.bestLap)).filter((x): x is number => x != null);
+    if (laps.length) fastest.set(col, Math.min(...laps));
   }
   return (
     <>
       <p className="small">
-        The best result of every level on every track. Brains race {RACE_LAPS} laps; the fastest full race on each track gets the trophy.
-        Your own times from level 1 are single laps. Where a level lets you try different brains or senses, the winning set-up is shown under the time.
+        Each level's fastest single lap on every track, with its total race time underneath. The fastest lap on each track gets the trophy, your own laps from level 1 included.
+        Where a level lets you try different brains or senses, the winning set-up is shown too.
       </p>
       <div className="champwrap">
         <table className="champ">
@@ -166,15 +173,17 @@ function Grid({ champs, humanBest }: ViewProps) {
                 {COLS.map(col => {
                   if (l.n === 1) {
                     const t = col === 'multi' ? undefined : humanBest[col];
-                    return <td key={col}>{t != null ? <><b>{t.toFixed(2)}s</b><small>1 lap · you</small></> : <span className="muted">—</span>}</td>;
+                    const top = t != null && fastest.get(col) === t;
+                    return <td key={col} className={top ? 'gold' : ''}>{t != null ? <><b>{top && '🏆 '}{t.toFixed(2)}s</b><small>best lap · you</small></> : <span className="muted">—</span>}</td>;
                   }
                   const c = cell(l.n, col);
                   if (!c) return <td key={col}><span className="muted">—</span></td>;
-                  const of = c.of ?? RACE_LAPS, top = winner.get(col) === c;
+                  const top = c.bestLap != null && fastest.get(col) === c.bestLap;
                   return (
                     <td key={col} className={top ? 'gold' : ''} title={c.tracks && c.tracks.length > 1 ? c.tracks.map(t => trackInfo(t).name).join(' + ') : undefined}>
-                      <b>{top && '🏆 '}{c.raceTime != null ? `${c.raceTime.toFixed(1)}s` : pctText(c.pct)}</b>
-                      <small>{c.raceTime != null ? `${of} laps` : `of ${of} laps`}</small>
+                      <b>{top && '🏆 '}{c.bestLap != null ? `${c.bestLap.toFixed(2)}s` : pctText(c.pct)}</b>
+                      <small>{c.bestLap != null ? 'best lap' : c.bestLap === undefined ? 'lap not recorded' : 'no full lap'}</small>
+                      <small>{totalText(c)}</small>
                       {l.setups && c.setup && <span className="setup">{c.setup}</span>}
                     </td>
                   );

@@ -9,6 +9,7 @@ export function carResult(c: Car, of: number): TestResult {
   return {
     pct: progressPct(c), raceTime: c.raceTime, of, t: c.t, dist: Math.max(0, c.maxProg),
     wobble: c.steps ? c.wobbleSum / c.steps : 0, lane: c.steps ? c.laneSum / c.steps : 0,
+    bestLap: c.laps.length ? Math.min(...c.laps) : null,
   };
 }
 
@@ -25,6 +26,7 @@ export function combine(legs: TestResult[], lapsPerTrack: number): TestResult {
     dist: legs.reduce((s, l) => s + l.dist, 0),
     wobble: legs.reduce((s, l) => s + l.wobble * steps(l), 0) / Math.max(t, 1e-6),
     lane: legs.reduce((s, l) => s + l.lane * steps(l), 0) / Math.max(t, 1e-6),
+    bestLap: legs.reduce<number | null>((m, l) => (l.bestLap != null && (m == null || l.bestLap < m) ? l.bestLap : m), null),
   };
 }
 
