@@ -142,6 +142,8 @@ kbd { font: 700 13px var(--mono); border: 2px solid var(--ink); border-bottom-wi
 /* the side column takes its height from the track column, so the brain picture fits beside the track */
 .labstage > .side { display: flex; flex-direction: column; height: 0; min-height: 100%; }
 @media (max-width: 920px) { .labstage > .side { height: auto; min-height: 0; } }
+.labstage.tallside > .side { height: auto; min-height: 0; }
+.labstage.tallside .brainpanel svg.perceptron { flex: none; height: auto; }
 .labstage .brainpanel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .labstage .brainpanel canvas.net { flex: 1; aspect-ratio: auto; min-height: 220px; height: 0; }
 .labstage .brainpanel svg.perceptron { flex: 1 1 0; min-height: 0; height: 0; }

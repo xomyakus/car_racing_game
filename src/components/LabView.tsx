@@ -100,7 +100,8 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
     : <>Reward rule: <b>{REWARDS[lab.reward].name}</b>. {REWARDS[lab.reward].rule}</>;
   return (
     <>
-      <div className="stage labstage">
+      {/* level 2's two perceptron pictures need their full size, so that side panel may be taller than the track */}
+      <div className={`stage labstage${showWeights && lab.layers.length === 2 ? ' tallside' : ''}`}>
         <div className="board">
           <TrackStage label="Race track" advance={el => lab.advance(el)} scene={() => lab.sceneState()} hud={hud} toast={toast} trackPick={trackPick} />
           <div className="controls" data-tour="lab-buttons">
