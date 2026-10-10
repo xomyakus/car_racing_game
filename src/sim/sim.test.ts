@@ -184,10 +184,12 @@ describe('championship by best lap', () => {
     const { betterChampion } = await import('./storage');
     const tenLaps = { pct: 1000, raceTime: 85, of: 10, bestLap: 8.1 };
     const threeLaps = { pct: 300, raceTime: 25, of: 3, bestLap: 7.9 };
-    const crashed = { pct: 160, raceTime: null, of: 10, bestLap: 8.0 };
+    const crashed = { pct: 160, raceTime: null, of: 10, bestLap: 7.0 };
     const noLap = { pct: 90, raceTime: null, of: 10, bestLap: null };
     expect(betterChampion(threeLaps, tenLaps)).toBe(true);
-    expect(betterChampion(crashed, tenLaps)).toBe(true);
+    // a fast lap doesn't count if the brain crashed before the finish
+    expect(betterChampion(tenLaps, crashed)).toBe(true);
+    expect(betterChampion(crashed, noLap)).toBe(true);
     expect(betterChampion(tenLaps, noLap)).toBe(true);
     expect(betterChampion({ ...noLap, pct: 95 }, noLap)).toBe(true);
   });

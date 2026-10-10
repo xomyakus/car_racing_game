@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { LEVELS, PARTS } from '../levels';
 import { Championship } from './Championship';
 import { betterChampion, loadSaved } from '../sim/storage';
-import { fmtTime, resultText } from '../sim/score';
+import { countedLap, fmtTime, resultText } from '../sim/score';
 
 /** Entry screen: one card per level, in two parts. */
 export function Home({ onOpen }: { onOpen: (n: number) => void }) {
@@ -13,7 +13,8 @@ export function Home({ onOpen }: { onOpen: (n: number) => void }) {
     const champs = Object.values(saved.champions).filter(c => c.level === n);
     if (!champs.length) return null;
     const top = champs.reduce((a, b) => (betterChampion(b, a) ? b : a));
-    return top.bestLap != null ? `Fastest lap: ${fmtTime(top.bestLap)}` : `Best brain: ${resultText(top)}`;
+    const lap = countedLap(top);
+    return lap != null ? `Fastest lap: ${fmtTime(lap)}` : `Best brain: ${resultText(top)}`;
   };
   return (
     <main className="wrap home">

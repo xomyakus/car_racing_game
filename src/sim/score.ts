@@ -32,6 +32,9 @@ export const REWARDS: Record<RewardId, { name: string; rule: string }> = {
   smooth: { name: 'Race result, but smooth', rule: 'Race result, minus points for wobbly steering and for driving away from the middle.' },
 };
 
+/** A brain's best lap only counts in the championship if it finished the whole race. */
+export const countedLap = (r: RaceResult): number | null => (r.raceTime != null ? r.bestLap ?? null : null);
+
 /** Distance first; any brain that finishes the race beats every brain that doesn't, then faster wins. */
 export const raceScore = (r: RaceResult) => (r.raceTime != null ? (r.of ?? RACE_LAPS) * 100 + (1000 - r.raceTime) : r.pct);
 

@@ -1,6 +1,6 @@
 import { Brain } from './brain';
 import { SensorSpec } from './sensors';
-import { RaceResult, RewardId, raceScore } from './score';
+import { RaceResult, RewardId, countedLap, raceScore } from './score';
 import type { TrackId } from './track';
 
 /** The best brain a lab has found, kept in this browser so it survives a reload. */
@@ -57,10 +57,14 @@ function write(s: Saved) {
 export function saveHumanBest(track: TrackId, t: number) { const s = loadSaved(); s.humanBest[track] = t; write(s); }
 export function saveBuilder(hidden: number[]) { const s = loadSaved(); s.builder = hidden; write(s); }
 
-/** Is `a` a better championship result than `b`? Fastest single lap wins; brains that never finished a lap are compared by race result. */
+/**
+ * Is `a` a better championship result than `b`? Among brains that finished the race, the fastest single lap wins.
+ * A finisher always beats a brain that didn't finish; those are compared by how far they got.
+ */
 export function betterChampion(a: RaceResult, b: RaceResult): boolean {
-  if (a.bestLap != null && b.bestLap != null) return a.bestLap < b.bestLap;
-  if (a.bestLap != null || b.bestLap != null) return a.bestLap != null;
+  const la = countedLap(a), lb = countedLap(b);
+  if (la != null && lb != null) return la < lb;
+  if (la != null || lb != null) return la != null;
   return raceScore(a) > raceScore(b);
 }
 

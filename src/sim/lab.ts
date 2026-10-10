@@ -139,7 +139,7 @@ export class Lab {
   onEvent: ((msg: string, good?: boolean) => void) | null = null;
   /** called whenever a new best brain is found */
   onBest: ((e: Entry) => void) | null = null;
-  /** the brain with the fastest single lap so far (not always the best racer) */
+  /** among brains that finished the race, the one with the fastest single lap (not always the best racer) */
   fastestLap: Entry | null = null;
   /** called whenever a brain sets a new fastest lap */
   onFastLap: ((e: Entry) => void) | null = null;
@@ -262,7 +262,8 @@ export class Lab {
     }
   }
   private considerLap(e: Entry) {
-    if (e.bestLap == null || (this.fastestLap?.bestLap != null && e.bestLap >= this.fastestLap.bestLap)) return;
+    // only brains that finish the whole race can set the fastest lap
+    if (e.raceTime == null || e.bestLap == null || (this.fastestLap?.bestLap != null && e.bestLap >= this.fastestLap.bestLap)) return;
     this.fastestLap = e;
     this.onFastLap?.(e);
   }
@@ -335,7 +336,7 @@ export class Lab {
       Object.assign(e, top.r, { legs: top.legs, why: top.why, laps: top.laps, score: top.s, counted: true });
       this.considerBest(e);
     }
-    const quick = res.filter(x => x.r.bestLap != null).sort((a, b) => a.r.bestLap! - b.r.bestLap!)[0];
+    const quick = res.filter(x => x.r.raceTime != null && x.r.bestLap != null).sort((a, b) => a.r.bestLap! - b.r.bestLap!)[0];
     if (quick && (this.fastestLap?.bestLap == null || quick.r.bestLap! < this.fastestLap.bestLap)) {
       const e = this.addEntry(cloneBrain(quick.b), 'pop', null, `gen ${this.popGen} fastest lap`);
       Object.assign(e, quick.r, { legs: quick.legs, why: quick.why, laps: quick.laps, score: quick.s, counted: true });

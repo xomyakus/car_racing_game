@@ -139,7 +139,7 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
                 ? <div className="tile"><span>Generation</span><b>{lab.curGen?.n ?? 0}</b><small>{lab.stats.kids} children tried</small></div>
                 : <div className="tile"><span>Generation</span><b>{lab.popGen}</b><small>{POP} cars per race</small></div>}
               <div className="tile"><span>Fastest lap</span><b>{lab.fastestLap?.bestLap != null ? `${lab.fastestLap.bestLap.toFixed(2)}s` : '—'}</b>
-                <small>{lab.fastestLap ? `brain #${lab.fastestLap.no}${lab.fastestLap === best ? ', the best brain' : ''}` : 'no full lap yet'}</small></div>
+                <small>{lab.fastestLap ? `brain #${lab.fastestLap.no}${lab.fastestLap === best ? ', the best brain' : ''}` : 'counts once a brain finishes the race'}</small></div>
               <div className="tile"><span>Test drives</span><b>{lab.testsDone}</b><small>{lab.tracks.length > 1 ? `${lab.tracks.length} tracks each` : lab.tracks[0].name}</small></div>
             </div>
             <p className="small">

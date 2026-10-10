@@ -4,7 +4,7 @@ import { SavedChampion, betterChampion, championBrain, loadSaved } from '../sim/
 import { inputLabels } from '../sim/sensors';
 import { NetDiagram } from './NetDiagram';
 import { RACE_LAPS } from '../sim/constants';
-import { REWARDS, pctText, raceScore } from '../sim/score';
+import { REWARDS, countedLap, pctText, raceScore } from '../sim/score';
 import { TRACK_IDS, TrackId, trackInfo } from '../sim/track';
 import { archText, weightCount } from '../sim/brain';
 
@@ -98,7 +98,8 @@ function Leaderboard({ champs, humanBest }: ViewProps) {
   type Row = { kind: 'brain'; c: SavedChampion } | { kind: 'you'; lap: number };
   const rows: Row[] = [...ranked(champs.filter(c => trackOf(c) === track)).map(c => ({ kind: 'brain' as const, c }))];
   if (you != null) rows.push({ kind: 'you', lap: you });
-  const lapOf = (r: Row) => (r.kind === 'you' ? r.lap : r.c.bestLap ?? null);
+  // your laps always count; a brain's only if it finished the whole race
+  const lapOf = (r: Row) => (r.kind === 'you' ? r.lap : countedLap(r.c));
   rows.sort((a, b) => {
     const la = lapOf(a), lb = lapOf(b);
     if (la != null && lb != null) return la - lb;
@@ -114,7 +115,7 @@ function Leaderboard({ champs, humanBest }: ViewProps) {
         </select>
         {track !== 'multi' && <span className="hint">{trackInfo(track).fact}</span>}
       </div>
-      <p className="small">Ranked by <b>fastest single lap</b>, so races of any length (and your own driving) can be compared. The total race time is shown too.</p>
+      <p className="small">Ranked by <b>fastest single lap</b>. A brain's lap only counts if it finished the whole race; every lap you drive yourself counts. Brains that didn't finish come last, by how far they got. The total race time is shown too.</p>
       {!rows.length && <p><b>Nobody has raced here yet.</b> Drive it in level 1, or pick this track with the track menu over any level's track view and start evolution.</p>}
       <ol className="leaderboard">
         {rows.map((r, i) => {
@@ -124,7 +125,7 @@ function Leaderboard({ champs, humanBest }: ViewProps) {
               <span className="rank">{lap == null ? '–' : MEDALS[i] ?? i + 1}</span>
               <span className="result">
                 <b>{lap != null ? `${lap.toFixed(2)}s` : r.kind === 'brain' ? pctText(r.c.pct) : '—'}</b>
-                <small>{lap != null ? 'best lap' : r.kind === 'brain' && r.c.bestLap === undefined ? 'lap time not recorded' : 'no full lap'}</small>
+                <small>{lap != null ? 'best lap' : r.kind === 'brain' && r.c.raceTime != null && r.c.bestLap === undefined ? 'lap time not recorded' : 'didn\'t finish the race'}</small>
               </span>
               {r.kind === 'you'
                 ? <span className="who"><b>You · Level 1</b><small>your own driving, with the arrow keys</small></span>
@@ -152,13 +153,13 @@ function Grid({ champs, humanBest }: ViewProps) {
   // the fastest single lap on each track gets the trophy, you included
   const fastest = new Map<Col, number>();
   for (const col of COLS) {
-    const laps = LEVELS.map(l => (l.n === 1 ? (col === 'multi' ? undefined : humanBest[col]) : cell(l.n, col)?.bestLap)).filter((x): x is number => x != null);
+    const laps = LEVELS.map(l => (l.n === 1 ? (col === 'multi' ? undefined : humanBest[col]) : (() => { const c = cell(l.n, col); return c ? countedLap(c) : null; })())).filter((x): x is number => x != null);
     if (laps.length) fastest.set(col, Math.min(...laps));
   }
   return (
     <>
       <p className="small">
-        Each level's fastest single lap on every track, with its total race time underneath. The fastest lap on each track gets the trophy, your own laps from level 1 included.
+        Each level's fastest single lap on every track (brains only count if they finished the race; every lap you drive counts), with the total race time underneath. The fastest lap on each track gets the trophy, your own laps from level 1 included.
         Where a level lets you try different brains or senses, the winning set-up is shown too.
       </p>
       <div className="champwrap">
@@ -178,11 +179,11 @@ function Grid({ champs, humanBest }: ViewProps) {
                   }
                   const c = cell(l.n, col);
                   if (!c) return <td key={col}><span className="muted">—</span></td>;
-                  const top = c.bestLap != null && fastest.get(col) === c.bestLap;
+                  const lap = countedLap(c), top = lap != null && fastest.get(col) === lap;
                   return (
                     <td key={col} className={top ? 'gold' : ''} title={c.tracks && c.tracks.length > 1 ? c.tracks.map(t => trackInfo(t).name).join(' + ') : undefined}>
-                      <b>{top && '🏆 '}{c.bestLap != null ? `${c.bestLap.toFixed(2)}s` : pctText(c.pct)}</b>
-                      <small>{c.bestLap != null ? 'best lap' : c.bestLap === undefined ? 'lap not recorded' : 'no full lap'}</small>
+                      <b>{top && '🏆 '}{lap != null ? `${lap.toFixed(2)}s` : pctText(c.pct)}</b>
+                      <small>{lap != null ? 'best lap' : c.raceTime != null && c.bestLap === undefined ? 'lap not recorded' : 'didn\'t finish'}</small>
                       <small>{totalText(c)}</small>
                       {l.setups && c.setup && <span className="setup">{c.setup}</span>}
                     </td>
