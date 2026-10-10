@@ -1,6 +1,6 @@
 // Drawings for the level 2 cards. Plain SVG, coloured with the page's CSS tokens.
 
-const Arrow = ({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2: number }) => {
+export const Arrow = ({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2: number }) => {
   const a = Math.atan2(y2 - y1, x2 - x1), h = 8;
   return (
     <g stroke="var(--ink)" strokeWidth={2.5} strokeLinecap="round" fill="none">

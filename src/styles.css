@@ -138,6 +138,27 @@ kbd { font: 700 13px var(--mono); border: 2px solid var(--ink); border-bottom-wi
 .tile span { display: block; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
 .tile b { display: block; font: 700 20px/1.2 var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .tile small { display: block; font-size: 12px; font-weight: 800; color: var(--muted); }
+.labstage { align-items: stretch; }
+/* the side column takes its height from the track column, so the brain picture fits beside the track */
+.labstage > .side { display: flex; flex-direction: column; height: 0; min-height: 100%; }
+@media (max-width: 920px) { .labstage > .side { height: auto; min-height: 0; } }
+.labstage .brainpanel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.labstage .brainpanel canvas.net { flex: 1; aspect-ratio: auto; min-height: 220px; height: 0; }
+.labstage .brainpanel svg.perceptron { flex: 1 1 0; min-height: 0; height: 0; }
+.labstage > .board { align-content: start; }
+.statrow { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: center; }
+.statrow .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 920px) { .statrow { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) { .statrow .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fold { gap: 0; }
+.fold > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: "▸"; font: 900 16px var(--body); color: var(--red); transition: transform .15s; }
+.fold[open] > summary::before { transform: rotate(90deg); }
+.fold .foldsum { flex: 1; min-width: 0; font: 800 13px var(--body); color: var(--muted); }
+.fold .foldhint { font: 900 11px var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--pos); }
+.fold .foldbody { display: grid; gap: 12px; margin-top: 12px; }
+.tile small.record { margin-top: 3px; padding-top: 3px; border-top: 1px dashed var(--rule); color: var(--red); }
 .tile.me { background: #fde3dd; }
 
 canvas.net { display: block; width: 100%; aspect-ratio: 1/0.82; height: auto; }

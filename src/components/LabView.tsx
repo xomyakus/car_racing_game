@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import type { Lab, Speed } from '../sim/lab';
 import { POP } from '../sim/lab';
 import { archText, weightCount } from '../sim/brain';
@@ -9,6 +9,7 @@ import { WHY_LONG } from '../sim/text';
 import { saveChampion } from '../sim/storage';
 import { useTick, useToast } from '../hooks';
 import { TrackPick, TrackStage } from './TrackStage';
+import { useTrackRecords } from './trackRecords';
 import { NetDiagram } from './NetDiagram';
 import { PerceptronDiagram } from './PerceptronDiagram';
 import { LabChart } from './LabChart';
@@ -41,6 +42,8 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
   useTick(6);
   const [toast, showToast] = useToast();
   const labels = inputLabels(lab.spec);
+  // championship records for this track (multi-track training has no single track)
+  const records = useTrackRecords(lab.tracks.length === 1 ? lab.tracks[0].id : null);
 
   useEffect(() => {
     lab.onEvent = showToast;
@@ -97,7 +100,7 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
     : <>Reward rule: <b>{REWARDS[lab.reward].name}</b>. {REWARDS[lab.reward].rule}</>;
   return (
     <>
-      <div className="stage">
+      <div className="stage labstage">
         <div className="board">
           <TrackStage label="Race track" advance={el => lab.advance(el)} scene={() => lab.sceneState()} hud={hud} toast={toast} trackPick={trackPick} />
           <div className="controls" data-tour="lab-buttons">
@@ -117,7 +120,7 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
         </div>
         <aside className="side">
           {sideTop}
-          <div className="panel" data-tour="lab-brain">
+          <div className="panel brainpanel" data-tour="lab-brain">
             <h3>{single ? 'Brain on the track' : 'Brain of the car in front'} · {archText(lab.layers)} · {weightCount(lab.layers)} weights</h3>
             {showWeights && lab.layers.length === 2 && (focus?.brain ?? best?.brain)
               // no hidden layer: each output is its own perceptron, so draw them as two separate pictures
@@ -132,28 +135,32 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
               <span><i style={{ background: 'var(--neg)' }} />negative weight (pull)</span>
             </div>
           </div>
-          <div className="panel" data-tour="lab-best">
-            <div className="tiles">
-              <div className="tile"><span>Best brain</span><b>{best ? `#${best.no}` : '—'}</b><small>{best ? resultText(best) : 'nothing tested yet'}</small></div>
-              {single
-                ? <div className="tile"><span>Generation</span><b>{lab.curGen?.n ?? 0}</b><small>{lab.stats.kids} children tried</small></div>
-                : <div className="tile"><span>Generation</span><b>{lab.popGen}</b><small>{POP} cars per race</small></div>}
-              <div className="tile"><span>Fastest lap</span><b>{lab.fastestLap?.bestLap != null ? `${lab.fastestLap.bestLap.toFixed(2)}s` : '—'}</b>
-                <small>{lab.fastestLap ? `brain #${lab.fastestLap.no}${lab.fastestLap === best ? ', the best brain' : ''}` : 'counts once a brain finishes the race'}</small></div>
-              <div className="tile"><span>Test drives</span><b>{lab.testsDone}</b><small>{lab.tracks.length > 1 ? `${lab.tracks.length} tracks each` : lab.tracks[0].name}</small></div>
-            </div>
-            <p className="small">
-              {goal}{' '}
-              {single
-                ? <>Each child is a copy of the best brain with some weights nudged by about <b>{lab.nudgeSize().toFixed(2)}</b>{lab.stats.fails >= 5 ? `, growing after ${lab.stats.fails} misses in a row` : ''}.</>
-                : <>The 5 best cars become parents; the winner also races again unchanged.</>}
-            </p>
-          </div>
         </aside>
       </div>
+      <div className="panel statrow" data-tour="lab-best">
+        <div className="tiles">
+          <div className="tile"><span>Best brain</span><b>{best ? `#${best.no}` : '—'}</b><small>{best ? resultText(best) : 'nothing tested yet'}</small>
+            {records && <small className="record">{records.race ? `track champion: ${records.race.time.toFixed(1)}s, level ${records.race.level}` : 'no track champion yet'}</small>}</div>
+          {single
+            ? <div className="tile"><span>Generation</span><b>{lab.curGen?.n ?? 0}</b><small>{lab.stats.kids} children tried</small></div>
+            : <div className="tile"><span>Generation</span><b>{lab.popGen}</b><small>{POP} cars per race</small></div>}
+          <div className="tile"><span>Fastest lap</span><b>{lab.fastestLap?.bestLap != null ? `${lab.fastestLap.bestLap.toFixed(2)}s` : '—'}</b>
+            <small>{lab.fastestLap ? `brain #${lab.fastestLap.no}${lab.fastestLap === best ? ', the best brain' : ''}` : 'counts once a brain finishes the race'}</small>
+            {records && <small className="record">{records.lap ? `track record: ${records.lap.time.toFixed(2)}s, ${records.lap.who}` : 'no lap record yet'}</small>}</div>
+          <div className="tile"><span>Test drives</span><b>{lab.testsDone}</b><small>{lab.tracks.length > 1 ? `${lab.tracks.length} tracks each` : lab.tracks[0].name}</small></div>
+        </div>
+        <p className="small">
+          {goal}{' '}
+          {single
+            ? <>Each child is a copy of the best brain with some weights nudged by about <b>{lab.nudgeSize().toFixed(2)}</b>{lab.stats.fails >= 5 ? `, growing after ${lab.stats.fails} misses in a row` : ''}.</>
+            : <>The 5 best cars become parents; the winner also races again unchanged.</>}
+        </p>
+      </div>
       <div className="labgrid">
-        <div className="panel" data-tour="lab-chart">
-          <h2>{single ? 'Generations' : 'Race diary'}</h2>
+        <Fold tour="lab-chart" title={single ? 'Generations' : 'Race diary'}
+          summary={single
+            ? `${lab.gens.length} generation${lab.gens.length === 1 ? '' : 's'} · ${lab.stats.kids} children tried · ${lab.stats.better} beat their parent`
+            : `${lab.popGen} races of ${POP} cars`}>
           <LabChart lab={lab} />
           <div className="legend">
             {single ? <>
@@ -169,13 +176,28 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
             </>}
           </div>
           {single ? <GenTable lab={lab} /> : <PopLog lab={lab} />}
-        </div>
-        <div className="panel" data-tour="lab-list">
-          <h2>Tested brains</h2>
+        </Fold>
+        <Fold tour="lab-list" title="Tested brains"
+          summary={`${lab.testsDone} test drive${lab.testsDone === 1 ? '' : 's'}${best ? ` · best #${best.no}: ${resultText(best)}` : ''}`}>
           <TestedList lab={lab} />
           <p className="small">Tap a brain to watch it drive again. Same weights, same drive, every time{lab.spec.noise > 0 ? ' (except for the sensor noise)' : ''}.</p>
-        </div>
+        </Fold>
       </div>
     </>
+  );
+}
+
+/** A panel that starts folded to one line; its contents are only built while it is open. */
+function Fold({ title, summary, tour, children }: { title: string; summary: string; tour: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details className="panel fold" data-tour={tour} open={open} onToggle={e => setOpen((e.target as HTMLDetailsElement).open)}>
+      <summary>
+        <h2>{title}</h2>
+        <span className="foldsum">{summary}</span>
+        <span className="foldhint">{open ? 'hide' : 'show'}</span>
+      </summary>
+      {open && <div className="foldbody">{children}</div>}
+    </details>
   );
 }
