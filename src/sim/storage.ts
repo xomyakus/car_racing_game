@@ -28,9 +28,17 @@ export interface SavedChampion extends RaceResult {
   epochs?: number;
   /** when it was saved (ms since 1970) */
   savedAt?: number;
+  /** where the brain was trained, when that isn't the track it raced on here (track tour results) */
+  trainedOn?: TrackId | 'multi';
+  /** the tracks of a 'multi' training */
+  trainedTracks?: TrackId[];
+  /** track tour results only: key of the saved brain that toured */
+  tourOf?: string;
+  /** track tour results only: tries it took (a car that hits a wall may try again) */
+  tries?: number;
 }
 
-interface Saved {
+export interface Saved {
   /** best human lap per track */
   humanBest: Partial<Record<TrackId, number>>;
   champions: Record<string, SavedChampion>;
@@ -73,6 +81,30 @@ export function saveChampion(key: string, c: SavedChampion) {
   const s = loadSaved(), old = s.champions[key];
   if (old && !betterChampion(c, old)) return;
   s.champions[key] = c;
+  write(s);
+}
+
+/** Where a saved brain was trained: the track it raced on, unless it is a track tour result. */
+export const trainedOn = (c: SavedChampion): TrackId | 'multi' => c.trainedOn ?? c.track ?? 'classic';
+/** The brains themselves, without the track tour results that reuse them. */
+export const trainedBrains = (s: Saved) => Object.entries(s.champions).filter(([, c]) => !c.tourOf);
+export const tourKey = (brainKey: string, track: TrackId) => `tour:${brainKey}@${track}`;
+
+const sameWeights = (a: number[], b: number[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+/**
+ * Enter one track tour race into the championship, as `brain` (saved under `brainKey`) racing on `track`.
+ * A better result replaces an older one, and so does any result of a newer brain saved under the same key.
+ */
+export function saveTourResult(brainKey: string, brain: SavedChampion, track: TrackId, r: RaceResult, tries: number) {
+  const s = loadSaved(), key = tourKey(brainKey, track), old = s.champions[key];
+  const entry: SavedChampion = {
+    ...brain, pct: r.pct, raceTime: r.raceTime, of: r.of, bestLap: r.bestLap,
+    name: `${brain.name} · track tour on ${track}`, track, tracks: [track],
+    trainedOn: trainedOn(brain), trainedTracks: brain.tracks, tourOf: brainKey, tries, savedAt: Date.now(),
+  };
+  if (old && sameWeights(old.w, brain.w) && !betterChampion(entry, old)) return;
+  s.champions[key] = entry;
   write(s);
 }
 

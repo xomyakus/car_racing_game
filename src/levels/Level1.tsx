@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Drive, Keys } from '../sim/drive';
-import { championBrain, loadSaved, saveHumanBest } from '../sim/storage';
+import { championBrain, loadSaved, saveHumanBest, trainedBrains } from '../sim/storage';
 import { BASIC } from '../sim/sensors';
 import { fmtTime, resultText } from '../sim/score';
 import { TRACK_IDS, TrackId, getTrack, trackInfo } from '../sim/track';
@@ -72,7 +72,7 @@ export function Level1() {
     d.best = loadSaved().humanBest[t] ?? null;
     d.setTrack(getTrack(t));
   };
-  const champs = Object.entries(saved.champions);
+  const champs = trainedBrains(saved);
   const pickRival = (key: string) => {
     setRival(key);
     const c = saved.champions[key];

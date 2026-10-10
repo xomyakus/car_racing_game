@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { LEVELS } from '../levels';
-import { SavedChampion, betterChampion, championBrain, loadSaved } from '../sim/storage';
+import { SavedChampion, betterChampion, championBrain, loadSaved, trainedOn } from '../sim/storage';
+import { trainedText } from './TrackTour';
 import { inputLabels } from '../sim/sensors';
 import { NetDiagram } from './NetDiagram';
 import { RACE_LAPS } from '../sim/constants';
@@ -45,6 +46,12 @@ export function Championship({ onClose }: { onClose: () => void }) {
 
 interface ViewProps { champs: SavedChampion[]; humanBest: Partial<Record<TrackId, number>> }
 
+/** "trained here", or "trained on Monza · track tour, 2 tries" for a brain raced away from its training track */
+function whereText(c: SavedChampion): string {
+  if (!c.tourOf) return `trained ${trainedOn(c) === 'multi' ? `on ${trainedText(c)}` : 'here'}`;
+  return `trained on ${trainedText(c)} · track tour${c.tries && c.tries > 1 ? `, ${c.tries} tries` : ''}`;
+}
+
 /** Best first: finished races by time, then unfinished ones by distance. */
 const ranked = (list: SavedChampion[]) => [...list].sort((a, b) => raceScore(b) - raceScore(a));
 
@@ -72,6 +79,7 @@ function BrainDetails({ c }: { c: SavedChampion }) {
           <dt>Inputs</dt><dd>{labels.join(', ')}</dd>
           <dt>Outputs</dt><dd>gas, steer</dd>
           {c.spec.noise > 0 && <><dt>Sensor noise</dt><dd>{c.spec.noise}</dd></>}
+          <dt>Trained on</dt><dd>{trainedText(c)}</dd>
           <dt>Judged by</dt><dd>{REWARDS[c.reward ?? 'race'].name}</dd>
           <dt>Weights</dt><dd>{weightCount(c.layers)}, all saved</dd>
         </dl>
@@ -133,6 +141,7 @@ function Leaderboard({ champs, humanBest }: ViewProps) {
                     <b>Level {r.c.level} · {levelTitle(r.c.level)}</b>
                     <small>{r.c.setup ?? archText(r.c.layers)}</small>
                     {r.c.tracks && r.c.tracks.length > 1 && <small>raced on {r.c.tracks.map(t => trackInfo(t).name).join(' + ')}</small>}
+                    <small className="trained">{whereText(r.c)}</small>
                     <small className="stats">{totalText(r.c)} · {statsText(r.c)}</small>
                   </span>}
               {r.kind === 'brain' && <BrainDetails c={r.c} />}
@@ -185,6 +194,7 @@ function Grid({ champs, humanBest }: ViewProps) {
                       <b>{top && '🏆 '}{lap != null ? `${lap.toFixed(2)}s` : pctText(c.pct)}</b>
                       <small>{lap != null ? 'best lap' : c.raceTime != null && c.bestLap === undefined ? 'lap not recorded' : 'didn\'t finish'}</small>
                       <small>{totalText(c)}</small>
+                      {trainedOn(c) !== col && <small className="trained">{whereText(c)}</small>}
                       {l.setups && c.setup && <span className="setup">{c.setup}</span>}
                     </td>
                   );

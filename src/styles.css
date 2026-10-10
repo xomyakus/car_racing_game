@@ -324,3 +324,4 @@ svg.art, svg.perceptron { display: block; width: 100%; height: auto; }
 .champ.tour .lvlcol small { display: block; font: 800 10px var(--body); color: var(--muted); }
 .champ.tour tr.now th, .champ.tour tr.now td { background: #e8f0ff; }
 .seg button[disabled] { opacity: .45; cursor: not-allowed; }
+.leaderboard small.trained, .champ td small.trained { color: var(--pos); }

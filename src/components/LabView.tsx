@@ -7,6 +7,7 @@ import { inputLabels, sensorText } from '../sim/sensors';
 import { REWARDS, resultText } from '../sim/score';
 import { WHY_LONG } from '../sim/text';
 import { saveChampion } from '../sim/storage';
+import { useOpenTour } from '../nav';
 import { useTick, useToast } from '../hooks';
 import { TrackPick, TrackStage } from './TrackStage';
 import { ordinal, useTrackRecords } from './trackRecords';
@@ -41,6 +42,7 @@ const SPEEDS: Speed[] = [1, 5, 20, 'max'];
 export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, trackPick }: Props) {
   useTick(6);
   const [toast, showToast] = useToast();
+  const openTour = useOpenTour();
   const labels = inputLabels(lab.spec);
   // championship records for this track (multi-track training has no single track)
   const records = useTrackRecords(lab.tracks.length === 1 ? lab.tracks[0].id : null, saveKey);
@@ -119,6 +121,8 @@ export function LabView({ lab, level, saveKey, onReset, sideTop, showWeights, tr
                 <button key={s} aria-pressed={lab.speed === s} onClick={() => { lab.speed = s; }}>{s === 'max' ? 'Max' : `${s}×`}</button>
               ))}
             </div>
+            <button className="btn small" disabled={!best} title={best ? 'Race this level\'s saved brain on every track' : 'Train a brain first'}
+              onClick={() => { if (lab.auto) lab.paused = true; openTour(saveKey); }}>🏁 Track tour</button>
             <button className="btn ghost small" onClick={onReset}>Start over</button>
           </div>
         </div>

@@ -6,7 +6,7 @@ import { Car, EndReason, newCar, progressPct, stepAI } from '../sim/car';
 import { carResult } from '../sim/exam';
 import type { SceneState } from '../sim/lab';
 import { TestResult, countedLap, fmtTime, pctText, raceScore } from '../sim/score';
-import { SavedChampion, championBrain, loadSaved } from '../sim/storage';
+import { SavedChampion, championBrain, loadSaved, saveTourResult, trainedBrains, trainedOn } from '../sim/storage';
 import { TRACK_IDS, TrackId, getTrack, trackInfo } from '../sim/track';
 import { archText } from '../sim/brain';
 import { WHY_TEXT } from '../sim/text';
@@ -40,7 +40,7 @@ class Tour {
   private acc = 0;
   private wait = 0;
 
-  constructor(readonly champ: SavedChampion, readonly laps: number) {
+  constructor(readonly key: string, readonly champ: SavedChampion, readonly laps: number) {
     this.legs = freshLegs();
   }
 
@@ -66,7 +66,10 @@ class Tour {
     if (!this.best || raceScore(result) > raceScore(this.best.result)) this.best = { result, why: c.why };
     this.tries++;
     if (c.why === 'wall' && this.tries < MAX_TRIES) { this.car = this.newLegCar(); return; }
-    this.legs[this.i] = { track: this.legs[this.i].track, ...this.best, tries: this.tries };
+    const track = this.legs[this.i].track;
+    this.legs[this.i] = { track, ...this.best, tries: this.tries };
+    // every finished track goes into the championship straight away, so stopping half way keeps what was raced
+    saveTourResult(this.key, this.champ, track, this.best.result, this.tries);
     this.best = null;
     this.tries = 0;
     this.i++;
@@ -107,9 +110,17 @@ class Tour {
   }
 }
 
+/** "Monza", or "Monza + Spa" for a brain trained on several tracks */
+export function trainedText(c: SavedChampion): string {
+  const t = trainedOn(c);
+  if (t !== 'multi') return trackInfo(t).name;
+  const list = c.trainedTracks ?? c.tracks;
+  return list?.length ? list.map(x => trackInfo(x).name).join(' + ') : 'several tracks';
+}
+
 const levelTitle = (n: number) => LEVELS.find(l => l.n === n)?.title ?? '';
 const brainLabel = (c: SavedChampion) =>
-  `Level ${c.level} · ${levelTitle(c.level)} · ${c.setup ?? archText(c.layers)} · trained on ${c.track === 'multi' ? 'several tracks' : trackInfo(c.track ?? 'classic').name}`;
+  `Level ${c.level} · ${levelTitle(c.level)} · ${c.setup ?? archText(c.layers)} · trained on ${trainedText(c)}`;
 
 /** Fastest lap that counts in the championship on each track (brains that finished, or you). */
 function trackRecords(): Partial<Record<TrackId, number>> {
@@ -123,21 +134,22 @@ function trackRecords(): Partial<Record<TrackId, number>> {
 }
 
 /** Separate screen: pick a saved brain and race it on every track, one after another, to score it everywhere. */
-export function TrackTour() {
+export function TrackTour({ initialKey }: { initialKey?: string }) {
   useTick(6);
   const saved = useMemo(() => loadSaved(), []);
+  // the records from before this visit, so a tour isn't compared with its own results
   const records = useMemo(trackRecords, []);
   const brains = useMemo(
-    () => Object.entries(saved.champions).sort(([, a], [, b]) => a.level - b.level || brainLabel(a).localeCompare(brainLabel(b))),
+    () => trainedBrains(saved).sort(([, a], [, b]) => a.level - b.level || brainLabel(a).localeCompare(brainLabel(b))),
     [saved],
   );
-  const [key, setKey] = useState(brains[0]?.[0] ?? '');
+  const [key, setKey] = useState(initialKey && brains.some(([k]) => k === initialKey) ? initialKey : brains[0]?.[0] ?? '');
   const [laps, setLaps] = useState(RACE_LAPS);
   const [speed, setSpeed] = useState<Speed>(5);
   const tourRef = useRef<Tour | null>(null);
   const champ = saved.champions[key];
   if (champ && (!tourRef.current || tourRef.current.champ !== champ || tourRef.current.laps !== laps)) {
-    tourRef.current = new Tour(champ, laps);
+    tourRef.current = new Tour(key, champ, laps);
   }
   const tour = tourRef.current;
 
@@ -172,7 +184,7 @@ export function TrackTour() {
     <>
       <div className="panel">
         <h2>Track tour</h2>
-        <p className="small">Pick a saved brain and race it on every track, one after another, to see how well it drives on circuits it may never have seen. Nothing here changes the brain or the championship.</p>
+        <p className="small">Pick a saved brain and race it on every track, one after another, to see how well it drives on circuits it may never have seen. Nothing here changes the brain. Each track's result goes into the Championship for that track, marked with where the brain was trained.</p>
         <div className="controls">
           <label className="check" htmlFor="tourbrain">Brain</label>
           <select id="tourbrain" className="select" value={key} disabled={busy} onChange={e => setKey(e.target.value)}>
@@ -214,7 +226,7 @@ export function TrackTour() {
                 const r = l.result, rec = records[l.track];
                 const lap = r?.bestLap ?? null;
                 const now = busy && n === tour.i;
-                const home = champ.track === l.track || champ.tracks?.includes(l.track);
+                const home = trainedOn(champ) === l.track || (trainedOn(champ) === 'multi' && champ.tracks?.includes(l.track));
                 return (
                   <tr key={l.track} className={now ? 'now' : ''}>
                     <th className="lvlcol">{trackInfo(l.track).name}{home && <small>trained here</small>}</th>
